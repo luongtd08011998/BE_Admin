@@ -119,6 +119,20 @@ public class GlobalExceptionHandler {
                 return fieldError.getField() + ": " + fieldError.getDefaultMessage();
         }
 
+        @ExceptionHandler(IllegalArgumentException.class)
+        public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException ex) {
+                log.warn("IllegalArgumentException: {}", ex.getMessage());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.badRequest(ex.getMessage()));
+        }
+
+        @ExceptionHandler(IllegalStateException.class)
+        public ResponseEntity<ApiResponse<Void>> handleIllegalState(IllegalStateException ex) {
+                log.warn("IllegalStateException: {}", ex.getMessage());
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                                .body(ApiResponse.conflict(ex.getMessage()));
+        }
+
         // ========== CATCH-ALL ==========
 
         @ExceptionHandler(Exception.class)

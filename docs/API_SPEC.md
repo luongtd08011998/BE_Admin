@@ -790,7 +790,250 @@ List all permissions with pagination.
 
 ---
 
-## 7. Dashboard
+## 6. Tags
+
+### GET /tags 🔒
+
+List all tags with pagination.
+
+**Query Parameters:** same as `/users` (page, size, sort)
+
+**Success Response (200):**
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "meta": { "page": 1, "pageSize": 10, "pages": 1, "total": 3 },
+    "result": [
+      {
+        "id": 1,
+        "name": "Java",
+        "description": "Ngôn ngữ lập trình Java",
+        "createdAt": "20xx-01-01T00:00:00Z",
+        "updatedAt": null
+      }
+    ]
+  },
+  "message": "Lấy danh sách tag thành công",
+  "timestamp": "20xx-04-04T10:00:00"
+}
+```
+
+---
+
+### GET /tags/{id} 🔒
+
+**Success Response (200):** single tag (same structure as list item above).
+
+**Errors:**
+| Status | When |
+|--------|------|
+| 404 | Tag not found |
+
+---
+
+### POST /tags 🔒
+
+**Request Body:**
+```json
+{
+  "name": "Spring Boot",
+  "description": "Framework Spring Boot cho Java"
+}
+```
+
+**Success Response (201):**
+```json
+{
+  "statusCode": 201,
+  "data": {
+    "id": 2,
+    "name": "Spring Boot",
+    "description": "Framework Spring Boot cho Java",
+    "createdAt": "20xx-04-04T10:00:00Z"
+  },
+  "message": "Tạo tag thành công",
+  "timestamp": "20xx-04-04T10:00:00"
+}
+```
+
+**Errors:**
+| Status | When |
+|--------|------|
+| 400 | Validation failed (blank name) |
+| 409 | Tag name already exists |
+
+---
+
+### PUT /tags 🔒
+
+**Request Body:**
+```json
+{
+  "id": 2,
+  "name": "Spring Boot Updated",
+  "description": "Updated description"
+}
+```
+
+**Success Response (200):** same structure as POST.
+
+**Errors:**
+| Status | When |
+|--------|------|
+| 400 | Validation failed |
+| 404 | Tag not found |
+| 409 | Tag name already taken by another tag |
+
+---
+
+### DELETE /tags/{id} 🔒
+
+**Success Response (200):**
+```json
+{
+  "statusCode": 200,
+  "data": null,
+  "message": "Xóa tag thành công",
+  "timestamp": "20xx-04-04T12:00:00"
+}
+```
+
+**Errors:**
+| Status | When |
+|--------|------|
+| 404 | Tag not found |
+
+---
+
+## 7. Articles
+
+### GET /articles 🔒
+
+List all articles with pagination.
+
+**Query Parameters:** same as `/users` (page, size, sort)
+
+**Success Response (200):**
+```json
+{
+  "statusCode": 200,
+  "data": {
+    "meta": { "page": 1, "pageSize": 10, "pages": 1, "total": 2 },
+    "result": [
+      {
+        "id": 1,
+        "title": "Giới thiệu Spring Boot 4",
+        "slug": "gioi-thieu-spring-boot-4",
+        "thumbnail": null,
+        "type": 0,
+        "views": 0,
+        "active": 1,
+        "author": { "id": 1, "name": "Admin" },
+        "category": { "id": 3, "name": "Công nghệ" },
+        "tags": [
+          { "id": 1, "name": "Java" },
+          { "id": 2, "name": "Spring Boot" }
+        ],
+        "createdAt": "20xx-01-01T00:00:00Z",
+        "updatedAt": "20xx-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "message": "Lấy danh sách bài viết thành công"
+}
+```
+
+---
+
+### GET /articles/{id} 🔒
+
+**Success Response (200):** single article (same structure as list item above).
+
+**Errors:**
+| Status | When |
+|--------|------|
+| 404 | Article not found |
+
+---
+
+### POST /articles 🔒
+
+**Request Body:**
+```json
+{
+  "title": "Bài viết mới",
+  "slug": "bai-viet-moi",
+  "content": "Nội dung bài viết...",
+  "thumbnail": "uploads/thumbnails/image.jpg",
+  "type": 0,
+  "active": 1,
+  "authorId": 1,
+  "categoryId": 3,
+  "tagIds": [1, 2]
+}
+```
+
+**Field notes:**
+- `type`: `byte` — 0=Tin tức, 1=Văn bản, 2=Video, 3=Gallery, 4=Khác (required)
+- `active`: `byte` — 0=Nháp, 1=Published, 2=Ẩn (optional, defaults to 0)
+- `authorId`: required — ID of existing user
+- `categoryId`: optional
+- `tagIds`: required (can be empty array `[]`)
+
+**Success Response (201):** same structure as GET /{id}.
+
+**Errors:**
+| Status | When |
+|--------|------|
+| 400 | Validation failed (blank title/slug, null type/authorId/tagIds) |
+| 404 | authorId, categoryId, or any tagId not found |
+| 409 | Slug already exists |
+
+---
+
+### PUT /articles 🔒
+
+**Request Body:** same as POST with added `id` field:
+```json
+{
+  "id": 1,
+  "title": "Updated Title",
+  "slug": "updated-slug",
+  ...
+}
+```
+
+**Success Response (200):** same structure as GET /{id}.
+
+**Errors:**
+| Status | When |
+|--------|------|
+| 400 | Validation failed |
+| 404 | Article, author, category, or tag not found |
+| 409 | Slug already taken by another article |
+
+---
+
+### DELETE /articles/{id} 🔒
+
+**Success Response (200):**
+```json
+{
+  "statusCode": 200,
+  "data": null,
+  "message": "Xóa bài viết thành công"
+}
+```
+
+**Errors:**
+| Status | When |
+|--------|------|
+| 404 | Article not found |
+
+---
+
+## 8. Dashboard
 
 ### GET /dashboard 🔒
 

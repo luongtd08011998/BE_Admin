@@ -19,6 +19,7 @@ import jakarta.persistence.Table;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import vn.hoidanit.springrestwithai.feature.article.Article;
 import vn.hoidanit.springrestwithai.feature.auth.RefreshToken;
 import vn.hoidanit.springrestwithai.feature.company.Company;
 import vn.hoidanit.springrestwithai.feature.role.Role;
@@ -64,6 +65,10 @@ public class User {
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     @JsonIgnore
     private List<RefreshToken> refreshTokens = new ArrayList<>();
+
+    @OneToMany(mappedBy = "author", fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<Article> articles = new ArrayList<>();
 
     private Instant createdAt;
 

@@ -36,6 +36,17 @@
 - ✅ **[2026-03-02]** User integration tests — 16 tests (requires MySQL)
 - ✅ **[2026-03-02]** User CONTEXT.md
 
+- ✅ **[2026-04-04]** Tag CRUD — entity (unique name), repository, DTOs (records), service, controller
+- ✅ **[2026-04-04]** Tag unit tests — 10 tests
+- ✅ **[2026-04-04]** Tag integration tests — 13 tests (requires MySQL)
+- ✅ **[2026-04-04]** Tag CONTEXT.md
+
+- ✅ **[2026-04-05]** Article CRUD — entity (byte type/active), TagArticle join entity, repository, DTOs (records), service, controller
+- ✅ **[2026-04-05]** Article unit tests — 14 tests
+- ✅ **[2026-04-05]** Article integration tests — 16 tests (requires MySQL)
+- ✅ **[2026-04-05]** Article CONTEXT.md
+- ✅ **[2026-04-05]** DatabaseSeeder updated: 5 ARTICLE permissions + 3 seed articles
+
 ## In Progress
 _Nothing._
 
