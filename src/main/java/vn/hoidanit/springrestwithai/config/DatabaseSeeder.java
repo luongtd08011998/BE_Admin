@@ -26,7 +26,6 @@ import vn.hoidanit.springrestwithai.feature.role.Role;
 import vn.hoidanit.springrestwithai.feature.role.RoleRepository;
 import vn.hoidanit.springrestwithai.feature.user.User;
 import vn.hoidanit.springrestwithai.feature.user.UserRepository;
-import vn.hoidanit.springrestwithai.util.constant.DocumentStatus;
 import vn.hoidanit.springrestwithai.util.constant.GenderEnum;
 
 /**
@@ -86,9 +85,9 @@ public class DatabaseSeeder implements CommandLineRunner {
         List<Role> roles = seedRoles(permissions);
         seedUsers(roles, companies);
         List<Category> categories = seedCategories();
-        seedDocuments(categories);
         List<Tag> tags = seedTags();
-        seedArticles(categories, tags);
+        List<Article> articles = seedArticles(categories, tags);
+        seedDocuments(articles);
 
         log.info(">>> Database seeded successfully");
     }
@@ -318,65 +317,40 @@ public class DatabaseSeeder implements CommandLineRunner {
     }
 
     // ═══════════════════════════════════════
-    // Step 6: Documents (5 records)
+    // Step 8: Documents (3 records — attachments of articles)
     // ═══════════════════════════════════════
 
-    private void seedDocuments(List<Category> categories) {
-        Category thoiSu = findCategory(categories, "Thời sự");
-        Category kinhTe = findCategory(categories, "Kinh tế");
-        Category congNghe = findCategory(categories, "Công nghệ");
-        Category theThao = findCategory(categories, "Thể thao");
+    private void seedDocuments(List<Article> articles) {
+        Article article1 = articles.get(0);
+        Article article2 = articles.get(1);
 
         List<Document> documents = List.of(
                 createDocument(
-                        "Hướng dẫn nội quy công ty",
-                        "huong-dan-noi-quy-cong-ty",
-                        "Tài liệu mô tả chi tiết các quy định và nội quy của công ty dành cho toàn thể nhân viên.",
-                        "Nội quy công ty bao gồm các quy định về giờ làm việc, trang phục, ứng xử và các chính sách liên quan đến nhân sự.",
-                        DocumentStatus.PUBLISHED,
-                        thoiSu),
+                        "Slide giới thiệu Spring Boot 4",
+                        "Bộ slide tóm tắt các tính năng mới trong Spring Boot 4",
+                        "https://example.com/files/spring-boot-4-slide.pdf",
+                        article1),
                 createDocument(
-                        "Quy trình tuyển dụng nhân sự",
-                        "quy-trinh-tuyen-dung-nhan-su",
-                        "Tài liệu hướng dẫn quy trình tuyển dụng từ đăng tin, sàng lọc hồ sơ đến phỏng vấn và onboarding.",
-                        "Quy trình tuyển dụng gồm 5 bước chính: xác định nhu cầu, đăng tuyển, sàng lọc, phỏng vấn và ký hợp đồng.",
-                        DocumentStatus.PUBLISHED,
-                        thoiSu),
+                        "Source code demo Spring Boot 4",
+                        "Source code ví dụ minh họa trong bài viết",
+                        "https://example.com/files/spring-boot-4-demo.zip",
+                        article1),
                 createDocument(
-                        "Chính sách lương thưởng và phúc lợi",
-                        "chinh-sach-luong-thuong-phuc-loi",
-                        "Mô tả chi tiết cấu trúc lương, các loại thưởng và phúc lợi dành cho nhân viên công ty.",
-                        "Chính sách lương thưởng bao gồm lương cơ bản, thưởng KPI, thưởng dự án và các phúc lợi như bảo hiểm, du lịch.",
-                        DocumentStatus.PUBLISHED,
-                        kinhTe),
-                createDocument(
-                        "Hướng dẫn sử dụng hệ thống quản lý nhân sự",
-                        "huong-dan-su-dung-he-thong-quan-ly-nhan-su",
-                        "Tài liệu hướng dẫn sử dụng phần mềm quản lý nhân sự nội bộ cho cán bộ HR.",
-                        "Hướng dẫn bao gồm cách đăng nhập, quản lý hồ sơ nhân viên, theo dõi chấm công và tạo báo cáo.",
-                        DocumentStatus.PUBLISHED,
-                        congNghe),
-                createDocument(
-                        "Kế hoạch đào tạo và phát triển nhân viên 2025",
-                        "ke-hoach-dao-tao-phat-trien-nhan-vien-2025",
-                        "Phác thảo kế hoạch đào tạo kỹ năng chuyên môn và kỹ năng mềm cho nhân viên trong năm 2025.",
-                        "Kế hoạch đào tạo 2025 tập trung vào nâng cao năng lực chuyên môn, kỹ năng lãnh đạo và phát triển bản thân cho toàn thể nhân viên.",
-                        DocumentStatus.DRAFT,
-                        theThao));
+                        "Tài liệu tham khảo REST API",
+                        "OpenAPI specification file cho bài viết REST API",
+                        "https://example.com/files/rest-api-spec.yaml",
+                        article2));
 
         documentRepository.saveAll(documents);
         log.info("Seeded {} documents", documents.size());
     }
 
-    private Document createDocument(String title, String slug, String content, String summary,
-            DocumentStatus status, Category category) {
+    private Document createDocument(String title, String description, String documentUrl, Article article) {
         Document document = new Document();
         document.setTitle(title);
-        document.setSlug(slug);
-        document.setContent(content);
-        document.setSummary(summary);
-        document.setStatus(status);
-        document.setCategory(category);
+        document.setDescription(description);
+        document.setDocumentUrl(documentUrl);
+        document.setArticle(article);
         return document;
     }
 
@@ -419,10 +393,10 @@ public class DatabaseSeeder implements CommandLineRunner {
     }
 
     // ═══════════════════════════════════════
-    // Step 8: Articles (3 records)
+    // Step 7: Tags (5 records)
     // ═══════════════════════════════════════
 
-    private void seedArticles(List<Category> categories, List<Tag> tags) {
+    private List<Article> seedArticles(List<Category> categories, List<Tag> tags) {
         User admin = userRepository.findByEmail("luongtd@toctienltd.vn")
                 .orElseThrow(() -> new RuntimeException("Seeded user not found"));
 
@@ -469,8 +443,9 @@ public class DatabaseSeeder implements CommandLineRunner {
                 (byte) 0, (byte) 1, admin, thoiSu,
                 List.of());
 
-        articleRepository.saveAll(List.of(article1, article2, article3, article4, article5));
+        List<Article> saved = articleRepository.saveAll(List.of(article1, article2, article3, article4, article5));
         log.info("Seeded 5 articles");
+        return saved;
     }
 
     private Article createArticle(String title, String slug, String content,

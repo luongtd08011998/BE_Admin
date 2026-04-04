@@ -39,7 +39,7 @@ app:
         allowed-folders:
             - avatars
             - logos
-    seed-data: false
+    seed-data: true
 
 springdoc:
     swagger-ui:

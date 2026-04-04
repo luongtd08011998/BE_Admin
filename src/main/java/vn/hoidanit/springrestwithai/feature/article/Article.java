@@ -19,6 +19,7 @@ import jakarta.persistence.UniqueConstraint;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import vn.hoidanit.springrestwithai.feature.category.Category;
+import vn.hoidanit.springrestwithai.feature.document.Document;
 import vn.hoidanit.springrestwithai.feature.user.User;
 
 import java.time.Instant;
@@ -67,6 +68,10 @@ public class Article {
             cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<TagArticle> tagArticles = new ArrayList<>();
+
+    @OneToMany(mappedBy = "article", fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<Document> documents = new ArrayList<>();
 
     private Instant createdAt;
 

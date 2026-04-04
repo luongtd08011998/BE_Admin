@@ -2,20 +2,17 @@ package vn.hoidanit.springrestwithai.feature.document;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import vn.hoidanit.springrestwithai.feature.category.Category;
-import vn.hoidanit.springrestwithai.util.constant.DocumentStatus;
+
+import vn.hoidanit.springrestwithai.feature.article.Article;
 
 import java.time.Instant;
 
@@ -27,27 +24,16 @@ public class Document {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
     private String title;
 
-    @Column(nullable = false, unique = true)
-    private String slug;
+    private String description;
 
-    @Lob
-    @Column(columnDefinition = "TEXT")
-    private String content;
-
-    private String summary;
-
-    private String thumbnail;
-
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private DocumentStatus status = DocumentStatus.DRAFT;
+    private String documentUrl;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
-    private Category category;
+    @JoinColumn(name = "article_id", nullable = false)
+    private Article article;
 
     private Instant createdAt;
 
@@ -83,67 +69,35 @@ public class Document {
         this.title = title;
     }
 
-    public String getSlug() {
-        return slug;
+    public String getDescription() {
+        return description;
     }
 
-    public void setSlug(String slug) {
-        this.slug = slug;
+    public void setDescription(String description) {
+        this.description = description;
     }
 
-    public String getContent() {
-        return content;
+    public String getDocumentUrl() {
+        return documentUrl;
     }
 
-    public void setContent(String content) {
-        this.content = content;
+    public void setDocumentUrl(String documentUrl) {
+        this.documentUrl = documentUrl;
     }
 
-    public String getSummary() {
-        return summary;
+    public Article getArticle() {
+        return article;
     }
 
-    public void setSummary(String summary) {
-        this.summary = summary;
-    }
-
-    public String getThumbnail() {
-        return thumbnail;
-    }
-
-    public void setThumbnail(String thumbnail) {
-        this.thumbnail = thumbnail;
-    }
-
-    public DocumentStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(DocumentStatus status) {
-        this.status = status;
-    }
-
-    public Category getCategory() {
-        return category;
-    }
-
-    public void setCategory(Category category) {
-        this.category = category;
+    public void setArticle(Article article) {
+        this.article = article;
     }
 
     public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
     public Instant getUpdatedAt() {
         return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
     }
 }

@@ -4,47 +4,39 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
-import vn.hoidanit.springrestwithai.exception.DuplicateResourceException;
 import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
-import vn.hoidanit.springrestwithai.feature.category.Category;
-import vn.hoidanit.springrestwithai.feature.category.CategoryRepository;
+import vn.hoidanit.springrestwithai.feature.article.Article;
+import vn.hoidanit.springrestwithai.feature.article.ArticleRepository;
 import vn.hoidanit.springrestwithai.feature.document.dto.CreateDocumentRequest;
 import vn.hoidanit.springrestwithai.feature.document.dto.DocumentResponse;
 import vn.hoidanit.springrestwithai.feature.document.dto.UpdateDocumentRequest;
-import vn.hoidanit.springrestwithai.util.constant.DocumentStatus;
+
+import java.util.List;
 
 @Service
 public class DocumentServiceImpl implements DocumentService {
 
     private final DocumentRepository documentRepository;
-    private final CategoryRepository categoryRepository;
+    private final ArticleRepository articleRepository;
 
-    public DocumentServiceImpl(DocumentRepository documentRepository, CategoryRepository categoryRepository) {
+    public DocumentServiceImpl(DocumentRepository documentRepository, ArticleRepository articleRepository) {
         this.documentRepository = documentRepository;
-        this.categoryRepository = categoryRepository;
+        this.articleRepository = articleRepository;
     }
 
     @Override
     @Transactional
     public DocumentResponse create(CreateDocumentRequest request) {
-        if (documentRepository.existsBySlug(request.slug())) {
-            throw new DuplicateResourceException("Bài viết", "slug", request.slug());
-        }
+        Article article = articleRepository.findById(request.articleId())
+                .orElseThrow(() -> new ResourceNotFoundException("Bài viết", "id", request.articleId()));
 
         Document document = new Document();
         document.setTitle(request.title());
-        document.setSlug(request.slug());
-        document.setContent(request.content());
-        document.setSummary(request.summary());
-        document.setThumbnail(request.thumbnail());
-        document.setStatus(request.status() != null ? request.status() : DocumentStatus.DRAFT);
-
-        if (request.categoryId() != null) {
-            Category category = categoryRepository.findById(request.categoryId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Danh mục", "id", request.categoryId()));
-            document.setCategory(category);
-        }
+        document.setDescription(request.description());
+        document.setDocumentUrl(request.documentUrl());
+        document.setArticle(article);
 
         return DocumentResponse.fromEntity(documentRepository.save(document));
     }
@@ -53,40 +45,29 @@ public class DocumentServiceImpl implements DocumentService {
     @Transactional
     public DocumentResponse update(UpdateDocumentRequest request) {
         Document document = documentRepository.findById(request.id())
-                .orElseThrow(() -> new ResourceNotFoundException("Bài viết", "id", request.id()));
+                .orElseThrow(() -> new ResourceNotFoundException("Tài liệu", "id", request.id()));
 
-        if (documentRepository.existsBySlugAndIdNot(request.slug(), request.id())) {
-            throw new DuplicateResourceException("Bài viết", "slug", request.slug());
-        }
+        Article article = articleRepository.findById(request.articleId())
+                .orElseThrow(() -> new ResourceNotFoundException("Bài viết", "id", request.articleId()));
 
         document.setTitle(request.title());
-        document.setSlug(request.slug());
-        document.setContent(request.content());
-        document.setSummary(request.summary());
-        document.setThumbnail(request.thumbnail());
-        if (request.status() != null) {
-            document.setStatus(request.status());
-        }
-
-        if (request.categoryId() != null) {
-            Category category = categoryRepository.findById(request.categoryId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Danh mục", "id", request.categoryId()));
-            document.setCategory(category);
-        } else {
-            document.setCategory(null);
-        }
+        document.setDescription(request.description());
+        document.setDocumentUrl(request.documentUrl());
+        document.setArticle(article);
 
         return DocumentResponse.fromEntity(documentRepository.save(document));
     }
 
     @Override
+    @Transactional
     public DocumentResponse getById(Long id) {
         Document document = documentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Bài viết", "id", id));
+                .orElseThrow(() -> new ResourceNotFoundException("Tài liệu", "id", id));
         return DocumentResponse.fromEntity(document);
     }
 
     @Override
+    @Transactional
     public ResultPaginationDTO getAll(Pageable pageable) {
         Page<DocumentResponse> pageResult = documentRepository.findAll(pageable)
                 .map(DocumentResponse::fromEntity);
@@ -95,9 +76,20 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     @Transactional
+    public List<DocumentResponse> getByArticleId(Long articleId) {
+        if (!articleRepository.existsById(articleId)) {
+            throw new ResourceNotFoundException("Bài viết", "id", articleId);
+        }
+        return documentRepository.findAllByArticleId(articleId).stream()
+                .map(DocumentResponse::fromEntity)
+                .toList();
+    }
+
+    @Override
+    @Transactional
     public void delete(Long id) {
         if (!documentRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Bài viết", "id", id);
+            throw new ResourceNotFoundException("Tài liệu", "id", id);
         }
         documentRepository.deleteById(id);
     }
