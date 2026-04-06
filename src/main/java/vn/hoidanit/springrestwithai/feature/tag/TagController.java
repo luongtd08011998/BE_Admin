@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import vn.hoidanit.springrestwithai.dto.ApiResponse;
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
+import vn.hoidanit.springrestwithai.feature.article.ArticleService;
 import vn.hoidanit.springrestwithai.feature.tag.dto.CreateTagRequest;
 import vn.hoidanit.springrestwithai.feature.tag.dto.TagResponse;
 import vn.hoidanit.springrestwithai.feature.tag.dto.UpdateTagRequest;
@@ -26,9 +27,11 @@ import java.net.URI;
 public class TagController {
 
     private final TagService tagService;
+    private final ArticleService articleService;
 
-    public TagController(TagService tagService) {
+    public TagController(TagService tagService, ArticleService articleService) {
         this.tagService = tagService;
+        this.articleService = articleService;
     }
 
     @GetMapping
@@ -41,6 +44,14 @@ public class TagController {
     public ResponseEntity<ApiResponse<TagResponse>> getById(@PathVariable Long id) {
         TagResponse response = tagService.getById(id);
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin tag thành công", response));
+    }
+
+    @GetMapping("/{id}/articles")
+    public ResponseEntity<ApiResponse<ResultPaginationDTO>> getArticlesByTag(
+            @PathVariable Long id,
+            @ParameterObject Pageable pageable) {
+        ResultPaginationDTO result = articleService.getArticlesByTag(id, pageable);
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách bài viết theo tag thành công", result));
     }
 
     @PostMapping

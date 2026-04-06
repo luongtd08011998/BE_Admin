@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -80,6 +81,15 @@ public class GlobalExceptionHandler {
                 log.warn("HttpMessageNotReadableException: {}", ex.getMessage());
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                                 .body(ApiResponse.badRequest("Request body không hợp lệ hoặc bị thiếu"));
+        }
+
+        @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+        public ResponseEntity<ApiResponse<Void>> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
+                log.warn("HttpMediaTypeNotSupportedException: content-type '{}' không được hỗ trợ", ex.getContentType());
+                String message = String.format("Content-Type '%s' không được hỗ trợ cho endpoint này",
+                                ex.getContentType());
+                return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                                .body(ApiResponse.ofError(415, message, "Unsupported Media Type"));
         }
 
         @ExceptionHandler(HttpRequestMethodNotSupportedException.class)

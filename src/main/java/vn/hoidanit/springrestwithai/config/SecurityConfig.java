@@ -18,6 +18,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -80,6 +81,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(WHITELIST).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/articles/**").permitAll()
+        .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
+        .requestMatchers(HttpMethod.GET, "/api/v1/tags/**").permitAll()
                         .anyRequest().access(permissionAuthorizationManager))
 
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {

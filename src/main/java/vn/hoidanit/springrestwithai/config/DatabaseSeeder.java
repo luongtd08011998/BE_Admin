@@ -38,7 +38,7 @@ import vn.hoidanit.springrestwithai.util.constant.GenderEnum;
 public class DatabaseSeeder implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DatabaseSeeder.class);
-    private static final String DEFAULT_PASSWORD = "123456";
+    private static final String DEFAULT_PASSWORD = "12345678";
 
     private final CategoryRepository categoryRepository;
     private final DocumentRepository documentRepository;

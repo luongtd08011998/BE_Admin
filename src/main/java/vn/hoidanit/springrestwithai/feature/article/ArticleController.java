@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import vn.hoidanit.springrestwithai.dto.ApiResponse;
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
+import vn.hoidanit.springrestwithai.feature.article.dto.ArticleFilterRequest;
 import vn.hoidanit.springrestwithai.feature.article.dto.ArticleResponse;
 import vn.hoidanit.springrestwithai.feature.article.dto.CreateArticleRequest;
 import vn.hoidanit.springrestwithai.feature.article.dto.UpdateArticleRequest;
@@ -32,14 +33,22 @@ public class ArticleController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<ResultPaginationDTO>> getAll(@ParameterObject Pageable pageable) {
-        ResultPaginationDTO result = articleService.getAll(pageable);
+    public ResponseEntity<ApiResponse<ResultPaginationDTO>> filter(
+            @ParameterObject ArticleFilterRequest filter,
+            @ParameterObject Pageable pageable) {
+        ResultPaginationDTO result = articleService.filter(filter, pageable);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách bài viết thành công", result));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ArticleResponse>> getById(@PathVariable Long id) {
         ArticleResponse response = articleService.getById(id);
+        return ResponseEntity.ok(ApiResponse.success("Lấy thông tin bài viết thành công", response));
+    }
+
+    @GetMapping("/slug/{slug}")
+    public ResponseEntity<ApiResponse<ArticleResponse>> getBySlug(@PathVariable String slug) {
+        ArticleResponse response = articleService.getBySlug(slug);
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin bài viết thành công", response));
     }
 
@@ -63,5 +72,13 @@ public class ArticleController {
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
         articleService.delete(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa bài viết thành công", null));
+    }
+
+    @GetMapping("/{id}/related")
+    public ResponseEntity<ApiResponse<ResultPaginationDTO>> getRelatedArticles(
+            @PathVariable Long id,
+            @ParameterObject Pageable pageable) {
+        ResultPaginationDTO result = articleService.getRelatedArticles(id, pageable);
+        return ResponseEntity.ok(ApiResponse.success("Lấy bài viết liên quan thành công", result));
     }
 }

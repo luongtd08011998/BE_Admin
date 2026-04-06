@@ -11,23 +11,29 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vn.hoidanit.springrestwithai.dto.ApiResponse;
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
+import vn.hoidanit.springrestwithai.feature.article.ArticleService;
 import vn.hoidanit.springrestwithai.feature.category.dto.CategoryResponse;
+import vn.hoidanit.springrestwithai.feature.category.dto.CategoryTreeResponseDTO;
 import vn.hoidanit.springrestwithai.feature.category.dto.CreateCategoryRequest;
 import vn.hoidanit.springrestwithai.feature.category.dto.UpdateCategoryRequest;
 
 import java.net.URI;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/categories")
 public class CategoryController {
 
     private final CategoryService categoryService;
+    private final ArticleService articleService;
 
-    public CategoryController(CategoryService categoryService) {
+    public CategoryController(CategoryService categoryService, ArticleService articleService) {
         this.categoryService = categoryService;
+        this.articleService = articleService;
     }
 
     @GetMapping
@@ -62,5 +68,46 @@ public class CategoryController {
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
         categoryService.delete(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa danh mục thành công", null));
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<List<CategoryResponse>>> searchByName(
+            @RequestParam String keyword) {
+        List<CategoryResponse> result = categoryService.searchByName(keyword);
+        return ResponseEntity.ok(ApiResponse.success("Tìm kiếm danh mục thành công", result));
+    }
+
+    @GetMapping("/parent/{parentId}")
+    public ResponseEntity<ApiResponse<List<CategoryResponse>>> getByParentId(
+            @PathVariable Long parentId) {
+        List<CategoryResponse> result = categoryService.getByParentId(parentId);
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh mục con thành công", result));
+    }
+
+    @GetMapping("/slug/{slug}")
+    public ResponseEntity<ApiResponse<CategoryResponse>> getBySlug(@PathVariable String slug) {
+        CategoryResponse response = categoryService.getBySlug(slug);
+        return ResponseEntity.ok(ApiResponse.success("Lấy thông tin danh mục theo slug thành công", response));
+    }
+
+    @GetMapping("/{id}/tree")
+    public ResponseEntity<ApiResponse<CategoryTreeResponseDTO>> getCategoryTree(@PathVariable Long id) {
+        CategoryTreeResponseDTO response = categoryService.getCategoryTree(id);
+        return ResponseEntity.ok(ApiResponse.success("Lấy cây danh mục thành công", response));
+    }
+
+    @GetMapping("/tree")
+    public ResponseEntity<ApiResponse<List<CategoryTreeResponseDTO>>> getAllAsTree(
+            @RequestParam(required = false) String keyword) {
+        List<CategoryTreeResponseDTO> result = categoryService.getAllAsTree(keyword);
+        return ResponseEntity.ok(ApiResponse.success("Lấy toàn bộ cây danh mục thành công", result));
+    }
+
+    @GetMapping("/{id}/articles")
+    public ResponseEntity<ApiResponse<ResultPaginationDTO>> getArticlesByCategoryTree(
+            @PathVariable Long id,
+            @ParameterObject Pageable pageable) {
+        ResultPaginationDTO result = articleService.getArticlesByCategoryTree(id, pageable);
+        return ResponseEntity.ok(ApiResponse.success("Lấy bài viết theo cây danh mục thành công", result));
     }
 }

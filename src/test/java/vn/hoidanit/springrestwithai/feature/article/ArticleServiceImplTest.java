@@ -13,6 +13,7 @@ import org.springframework.data.domain.PageRequest;
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
 import vn.hoidanit.springrestwithai.exception.DuplicateResourceException;
 import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
+import vn.hoidanit.springrestwithai.feature.article.dto.ArticleFilterRequest;
 import vn.hoidanit.springrestwithai.feature.article.dto.ArticleResponse;
 import vn.hoidanit.springrestwithai.feature.article.dto.CreateArticleRequest;
 import vn.hoidanit.springrestwithai.feature.article.dto.UpdateArticleRequest;
@@ -23,7 +24,6 @@ import vn.hoidanit.springrestwithai.feature.tag.TagRepository;
 import vn.hoidanit.springrestwithai.feature.user.User;
 import vn.hoidanit.springrestwithai.feature.user.UserRepository;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -268,18 +268,21 @@ class ArticleServiceImplTest {
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
-    // ========== getAll ==========
+    // ========== filter ==========
 
     @Test
-    @DisplayName("getAll - success: returns paginated result")
-    void getAll_success_returnsPaginatedResult() {
+    @DisplayName("filter - success: returns paginated result")
+    void filter_success_returnsPaginatedResult() {
         User author = buildUser(1L, "Admin");
         Article article = buildArticle(1L, "Title", "slug", (byte) 0, (byte) 1, author, null, List.of());
         Page<Article> page = new PageImpl<>(List.of(article), PageRequest.of(0, 10), 1);
+        ArticleFilterRequest filter = new ArticleFilterRequest(null);
 
-        when(articleRepository.findAll(any(PageRequest.class))).thenReturn(page);
+        when(articleRepository.findBy(
+                any(org.springframework.data.jpa.domain.PredicateSpecification.class),
+                any(java.util.function.Function.class))).thenReturn(page);
 
-        ResultPaginationDTO result = articleService.getAll(PageRequest.of(0, 10));
+        ResultPaginationDTO result = articleService.filter(filter, PageRequest.of(0, 10));
 
         assertThat(result.meta().total()).isEqualTo(1);
         assertThat(result.result()).hasSize(1);

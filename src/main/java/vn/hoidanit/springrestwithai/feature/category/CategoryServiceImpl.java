@@ -8,8 +8,15 @@ import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
 import vn.hoidanit.springrestwithai.exception.DuplicateResourceException;
 import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
 import vn.hoidanit.springrestwithai.feature.category.dto.CategoryResponse;
+import vn.hoidanit.springrestwithai.feature.category.dto.CategoryTreeResponseDTO;
 import vn.hoidanit.springrestwithai.feature.category.dto.CreateCategoryRequest;
 import vn.hoidanit.springrestwithai.feature.category.dto.UpdateCategoryRequest;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class CategoryServiceImpl implements CategoryService {
@@ -95,5 +102,99 @@ public class CategoryServiceImpl implements CategoryService {
             throw new IllegalStateException("Không thể xóa danh mục đang có danh mục con");
         }
         categoryRepository.deleteById(id);
+    }
+
+    @Override
+    public List<CategoryResponse> searchByName(String keyword) {
+        return categoryRepository.findByNameContainingIgnoreCase(keyword)
+                .stream()
+                .map(CategoryResponse::fromEntity)
+                .toList();
+    }
+
+    @Override
+    public List<CategoryResponse> getByParentId(Long parentId) {
+        if (!categoryRepository.existsById(parentId)) {
+            throw new ResourceNotFoundException("Danh mục cha", "id", parentId);
+        }
+        return categoryRepository.findByParentId(parentId)
+                .stream()
+                .map(CategoryResponse::fromEntity)
+                .toList();
+    }
+
+    @Override
+    public CategoryResponse getBySlug(String slug) {
+        Category category = categoryRepository.findBySlugIgnoreCase(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("Danh mục", "slug", slug));
+        return CategoryResponse.fromEntity(category);
+    }
+
+    @Override
+    public CategoryTreeResponseDTO getCategoryTree(Long id) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Danh mục", "id", id));
+        return buildTree(category);
+    }
+
+    @Override
+    public List<CategoryTreeResponseDTO> getAllAsTree(String keyword) {
+        List<Category> all = (keyword != null && !keyword.isBlank())
+                ? categoryRepository.findByNameContainingIgnoreCase(keyword)
+                : categoryRepository.findAll();
+
+        Map<Long, CategoryTreeResponseDTO> dtoMap = all.stream()
+                .map(c -> new CategoryTreeResponseDTO(
+                        c.getId(), c.getName(), c.getSlug(),
+                        c.getCreatedAt(), c.getUpdatedAt()))
+                .collect(Collectors.toMap(CategoryTreeResponseDTO::getId, Function.identity()));
+
+        List<CategoryTreeResponseDTO> roots = new ArrayList<>();
+
+        for (Category c : all) {
+            CategoryTreeResponseDTO dto = dtoMap.get(c.getId());
+            if (c.getParent() == null) {
+                roots.add(dto);
+            } else {
+                CategoryTreeResponseDTO parentDto = dtoMap.get(c.getParent().getId());
+                if (parentDto != null) {
+                    parentDto.getChildren().add(dto);
+                } else {
+                    // parent không nằm trong kết quả (do filter keyword) → treat as root
+                    roots.add(dto);
+                }
+            }
+        }
+
+        return roots;
+    }
+
+    private CategoryTreeResponseDTO buildTree(Category category) {
+        CategoryTreeResponseDTO dto = new CategoryTreeResponseDTO(
+                category.getId(),
+                category.getName(),
+                category.getSlug(),
+                category.getCreatedAt(),
+                category.getUpdatedAt()
+        );
+
+        if (category.getParent() != null) {
+            Category parent = category.getParent();
+            dto.setParent(new CategoryTreeResponseDTO(
+                    parent.getId(),
+                    parent.getName(),
+                    parent.getSlug(),
+                    parent.getCreatedAt(),
+                    parent.getUpdatedAt()
+            ));
+        }
+
+        List<CategoryTreeResponseDTO> childDTOs = categoryRepository.findByParentId(category.getId())
+                .stream()
+                .map(this::buildTree)
+                .toList();
+        dto.setChildren(childDTOs);
+
+        return dto;
     }
 }

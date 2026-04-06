@@ -3,6 +3,7 @@ package vn.hoidanit.springrestwithai.feature.article;
 import org.springframework.data.domain.Pageable;
 
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
+import vn.hoidanit.springrestwithai.feature.article.dto.ArticleFilterRequest;
 import vn.hoidanit.springrestwithai.feature.article.dto.ArticleResponse;
 import vn.hoidanit.springrestwithai.feature.article.dto.CreateArticleRequest;
 import vn.hoidanit.springrestwithai.feature.article.dto.UpdateArticleRequest;
@@ -15,7 +16,15 @@ public interface ArticleService {
 
     ArticleResponse getById(Long id);
 
-    ResultPaginationDTO getAll(Pageable pageable);
+    ArticleResponse getBySlug(String slug);
+
+    ResultPaginationDTO filter(ArticleFilterRequest filter, Pageable pageable);
 
     void delete(Long id);
+
+    ResultPaginationDTO getArticlesByCategoryTree(Long categoryId, Pageable pageable);
+
+    ResultPaginationDTO getArticlesByTag(Long tagId, Pageable pageable);
+
+    ResultPaginationDTO getRelatedArticles(Long articleId, Pageable pageable);
 }
