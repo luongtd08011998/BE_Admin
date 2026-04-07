@@ -17,17 +17,18 @@ Production:  https://api.example.com/api/v1
 ## Authentication
 
 All endpoints require JWT in `Authorization: Bearer <accessToken>` header,
-except those marked as  **Public**.
+except those marked as **Public**.
 
 ---
 
 ## 1. Auth
 
-### POST /auth/login 
+### POST /auth/login
 
 Login and receive tokens.
 
 **Request Body:**
+
 ```json
 {
   "email": "admin@example.com",
@@ -36,6 +37,7 @@ Login and receive tokens.
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "statusCode": 200,
@@ -49,6 +51,7 @@ Login and receive tokens.
 ```
 
 **Also sets cookie:**
+
 ```
 Set-Cookie: refresh_token=eyJ...;
             HttpOnly; Secure; SameSite=Lax;
@@ -63,11 +66,12 @@ Set-Cookie: refresh_token=eyJ...;
 
 ---
 
-### POST /auth/register 
+### POST /auth/register
 
 Register a new user account.
 
 **Request Body:**
+
 ```json
 {
   "name": "Nguyen Van A",
@@ -80,6 +84,7 @@ Register a new user account.
 ```
 
 **Success Response (201):**
+
 ```json
 {
   "statusCode": 201,
@@ -105,15 +110,17 @@ Register a new user account.
 
 ---
 
-### POST /auth/refresh 
+### POST /auth/refresh
 
 Get new access token using refresh token.
 
 **Sources (backend checks in order):**
+
 1. Cookie `refresh_token` (SPA — browser sends automatically)
 2. Request body `refreshToken` (Mobile — sends explicitly)
 
 **Request Body (mobile only):**
+
 ```json
 {
   "refreshToken": "eyJ..."
@@ -121,6 +128,7 @@ Get new access token using refresh token.
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "statusCode": 200,
@@ -150,6 +158,7 @@ Invalidate refresh token and clear cookie.
 **Request:** No body needed. Token taken from cookie or Authorization header.
 
 **Success Response (200):**
+
 ```json
 {
   "statusCode": 200,
@@ -160,6 +169,7 @@ Invalidate refresh token and clear cookie.
 ```
 
 **Also clears cookie:**
+
 ```
 Set-Cookie: refresh_token=; Max-Age=0; Path=/api/v1/auth
 ```
@@ -171,6 +181,7 @@ Set-Cookie: refresh_token=; Max-Age=0; Path=/api/v1/auth
 Get current logged-in user info.
 
 **Success Response (200):**
+
 ```json
 {
   "statusCode": 200,
@@ -186,9 +197,7 @@ Get current logged-in user info.
       "id": 1,
       "name": "HoiDanIT"
     },
-    "roles": [
-      { "id": 1, "name": "ADMIN" }
-    ]
+    "roles": [{ "id": 1, "name": "ADMIN" }]
   },
   "message": "Success",
   "timestamp": "20xx-02-28T10:00:00"
@@ -211,6 +220,7 @@ List all users with pagination.
 | sort | string | id,asc | Sort field and direction |
 
 **Success Response (200):**
+
 ```json
 {
   "statusCode": 200,
@@ -249,6 +259,7 @@ List all users with pagination.
 Get a single user by ID.
 
 **Success Response (200):**
+
 ```json
 {
   "statusCode": 200,
@@ -282,6 +293,7 @@ Get a single user by ID.
 Create a new user (admin operation — assigns company and roles).
 
 **Request Body:**
+
 ```json
 {
   "name": "Tran Thi B",
@@ -296,6 +308,7 @@ Create a new user (admin operation — assigns company and roles).
 ```
 
 **Success Response (201):**
+
 ```json
 {
   "statusCode": 201,
@@ -333,6 +346,7 @@ Create a new user (admin operation — assigns company and roles).
 Update an existing user.
 
 **Request Body:**
+
 ```json
 {
   "id": 2,
@@ -346,6 +360,7 @@ Update an existing user.
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "statusCode": 200,
@@ -381,6 +396,7 @@ Update an existing user.
 Delete a user. Also revokes all their refresh tokens.
 
 **Success Response (200):**
+
 ```json
 {
   "statusCode": 200,
@@ -406,6 +422,7 @@ List all companies with pagination.
 **Query Parameters:** same as `/users` (page, size, sort)
 
 **Success Response (200):**
+
 ```json
 {
   "statusCode": 200,
@@ -433,6 +450,7 @@ List all companies with pagination.
 ### GET /companies/{id} 🔒
 
 **Success Response (200):**
+
 ```json
 {
   "statusCode": 200,
@@ -460,6 +478,7 @@ List all companies with pagination.
 ### POST /companies 🔒
 
 **Request Body:**
+
 ```json
 {
   "name": "FPT Software",
@@ -470,6 +489,7 @@ List all companies with pagination.
 ```
 
 **Success Response (201):**
+
 ```json
 {
   "statusCode": 201,
@@ -496,6 +516,7 @@ List all companies with pagination.
 ### PUT /companies 🔒
 
 **Request Body:**
+
 ```json
 {
   "id": 2,
@@ -519,6 +540,7 @@ List all companies with pagination.
 ### DELETE /companies/{id} 🔒
 
 **Success Response (200):**
+
 ```json
 {
   "statusCode": 200,
@@ -544,6 +566,7 @@ List all companies with pagination.
 List all roles with pagination.
 
 **Success Response (200):**
+
 ```json
 {
   "statusCode": 200,
@@ -555,8 +578,20 @@ List all roles with pagination.
         "name": "ADMIN",
         "description": "Full system access",
         "permissions": [
-          { "id": 1, "name": "CREATE_USER", "apiPath": "/api/v1/users", "method": "POST", "module": "USER" },
-          { "id": 4, "name": "VIEW_USERS", "apiPath": "/api/v1/users", "method": "GET", "module": "USER" }
+          {
+            "id": 1,
+            "name": "CREATE_USER",
+            "apiPath": "/api/v1/users",
+            "method": "POST",
+            "module": "USER"
+          },
+          {
+            "id": 4,
+            "name": "VIEW_USERS",
+            "apiPath": "/api/v1/users",
+            "method": "GET",
+            "module": "USER"
+          }
         ],
         "createdAt": "20xx-01-01T00:00:00Z",
         "updatedAt": null
@@ -584,6 +619,7 @@ List all roles with pagination.
 ### POST /roles 🔒
 
 **Request Body:**
+
 ```json
 {
   "name": "HR",
@@ -593,6 +629,7 @@ List all roles with pagination.
 ```
 
 **Success Response (201):**
+
 ```json
 {
   "statusCode": 201,
@@ -601,10 +638,34 @@ List all roles with pagination.
     "name": "HR",
     "description": "Human resources management",
     "permissions": [
-      { "id": 1, "name": "CREATE_USER", "apiPath": "/api/v1/users", "method": "POST", "module": "USER" },
-      { "id": 2, "name": "UPDATE_USER", "apiPath": "/api/v1/users", "method": "PUT", "module": "USER" },
-      { "id": 4, "name": "VIEW_USERS", "apiPath": "/api/v1/users", "method": "GET", "module": "USER" },
-      { "id": 8, "name": "VIEW_COMPANIES", "apiPath": "/api/v1/companies", "method": "GET", "module": "COMPANY" }
+      {
+        "id": 1,
+        "name": "CREATE_USER",
+        "apiPath": "/api/v1/users",
+        "method": "POST",
+        "module": "USER"
+      },
+      {
+        "id": 2,
+        "name": "UPDATE_USER",
+        "apiPath": "/api/v1/users",
+        "method": "PUT",
+        "module": "USER"
+      },
+      {
+        "id": 4,
+        "name": "VIEW_USERS",
+        "apiPath": "/api/v1/users",
+        "method": "GET",
+        "module": "USER"
+      },
+      {
+        "id": 8,
+        "name": "VIEW_COMPANIES",
+        "apiPath": "/api/v1/companies",
+        "method": "GET",
+        "module": "COMPANY"
+      }
     ],
     "createdAt": "20xx-02-28T10:00:00Z"
   },
@@ -624,6 +685,7 @@ List all roles with pagination.
 ### PUT /roles 🔒
 
 **Request Body:**
+
 ```json
 {
   "id": 3,
@@ -648,6 +710,7 @@ List all roles with pagination.
 ### DELETE /roles/{id} 🔒
 
 **Success Response (200):**
+
 ```json
 {
   "statusCode": 200,
@@ -673,6 +736,7 @@ List all roles with pagination.
 List all permissions with pagination.
 
 **Success Response (200):**
+
 ```json
 {
   "statusCode": 200,
@@ -711,6 +775,7 @@ List all permissions with pagination.
 ### POST /permissions 🔒
 
 **Request Body:**
+
 ```json
 {
   "name": "CREATE_USER",
@@ -721,6 +786,7 @@ List all permissions with pagination.
 ```
 
 **Success Response (201):**
+
 ```json
 {
   "statusCode": 201,
@@ -748,6 +814,7 @@ List all permissions with pagination.
 ### PUT /permissions 🔒
 
 **Request Body:**
+
 ```json
 {
   "id": 1,
@@ -772,6 +839,7 @@ List all permissions with pagination.
 ### DELETE /permissions/{id} 🔒
 
 **Success Response (200):**
+
 ```json
 {
   "statusCode": 200,
@@ -799,6 +867,7 @@ List all tags with pagination.
 **Query Parameters:** same as `/users` (page, size, sort)
 
 **Success Response (200):**
+
 ```json
 {
   "statusCode": 200,
@@ -835,6 +904,7 @@ List all tags with pagination.
 ### POST /tags 🔒
 
 **Request Body:**
+
 ```json
 {
   "name": "Spring Boot",
@@ -843,6 +913,7 @@ List all tags with pagination.
 ```
 
 **Success Response (201):**
+
 ```json
 {
   "statusCode": 201,
@@ -868,6 +939,7 @@ List all tags with pagination.
 ### PUT /tags 🔒
 
 **Request Body:**
+
 ```json
 {
   "id": 2,
@@ -890,6 +962,7 @@ List all tags with pagination.
 ### DELETE /tags/{id} 🔒
 
 **Success Response (200):**
+
 ```json
 {
   "statusCode": 200,
@@ -915,6 +988,7 @@ List all articles with pagination.
 **Query Parameters:** same as `/users` (page, size, sort)
 
 **Success Response (200):**
+
 ```json
 {
   "statusCode": 200,
@@ -946,6 +1020,24 @@ List all articles with pagination.
 
 ---
 
+### GET /articles/search 🔒
+
+Search articles with pagination. Search is case-insensitive and accent-insensitive on `title`, `slug`, and `content`.
+
+**Query Parameters:**
+
+- `keyword`: optional
+- `page`, `size`, `sort`: same as `/users`
+
+**Success Response (200):** same structure as `GET /articles`.
+
+**Examples:**
+
+- `keyword=huong dan` matches `Hướng dẫn`
+- `keyword=SPRING` matches `spring`
+
+---
+
 ### GET /articles/{id} 🔒
 
 **Success Response (200):** single article (same structure as list item above).
@@ -960,6 +1052,7 @@ List all articles with pagination.
 ### POST /articles 🔒
 
 **Request Body:**
+
 ```json
 {
   "title": "Bài viết mới",
@@ -975,6 +1068,7 @@ List all articles with pagination.
 ```
 
 **Field notes:**
+
 - `type`: `byte` — 0=Tin tức, 1=Văn bản, 2=Video, 3=Gallery, 4=Khác (required)
 - `active`: `byte` — 0=Nháp, 1=Published, 2=Ẩn (optional, defaults to 0)
 - `authorId`: required — ID of existing user
@@ -995,6 +1089,7 @@ List all articles with pagination.
 ### PUT /articles 🔒
 
 **Request Body:** same as POST with added `id` field:
+
 ```json
 {
   "id": 1,
@@ -1018,6 +1113,7 @@ List all articles with pagination.
 ### DELETE /articles/{id} 🔒
 
 **Success Response (200):**
+
 ```json
 {
   "statusCode": 200,
@@ -1040,6 +1136,7 @@ List all articles with pagination.
 Get summary counts for the admin dashboard.
 
 **Success Response (200):**
+
 ```json
 {
   "statusCode": 200,
@@ -1094,21 +1191,22 @@ Upload a single file to the server. The returned `fileName` is then used to upda
 
 **Request:** `multipart/form-data`
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| file | file | yes | The file to upload |
-| folder | string | yes | Target sub-folder: `avatars` or `logos` |
+| Field  | Type   | Required | Description                             |
+| ------ | ------ | -------- | --------------------------------------- |
+| file   | file   | yes      | The file to upload                      |
+| folder | string | yes      | Target sub-folder: `avatars` or `logos` |
 
 **Validation rules (rejected with 400 if violated):**
 
-| Rule | Constraint |
-|------|-----------|
-| File name | Must not be blank, no special characters except `-` `_` `.` |
-| Allowed extensions | `jpg`, `jpeg`, `png`, `gif`, `webp` |
-| Max file size | 5 MB (5,242,880 bytes) |
-| Allowed folders | `avatars`, `logos` |
+| Rule               | Constraint                                                  |
+| ------------------ | ----------------------------------------------------------- |
+| File name          | Must not be blank, no special characters except `-` `_` `.` |
+| Allowed extensions | `jpg`, `jpeg`, `png`, `gif`, `webp`                         |
+| Max file size      | 5 MB (5,242,880 bytes)                                      |
+| Allowed folders    | `avatars`, `logos`                                          |
 
 **Success Response (201):**
+
 ```json
 {
   "statusCode": 201,
@@ -1142,6 +1240,7 @@ Upload a single file to the server. The returned `fileName` is then used to upda
 ```
 
 **File storage:**
+
 - Files are saved under `{upload-dir}/{folder}/` on the server file system
 - `upload-dir` is configured via `app.upload.base-dir` in `application.yml`
 - Stored file name = `{epochMillis}_{sanitizedOriginalName}` to avoid collisions
@@ -1151,32 +1250,32 @@ Upload a single file to the server. The returned `fileName` is then used to upda
 
 ## Endpoint Summary
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | /auth/login | 🔓 | Login |
-| POST | /auth/register | 🔓 | Register |
-| POST | /auth/refresh | 🔓 | Refresh token |
-| POST | /auth/logout | 🔒 | Logout |
-| GET | /auth/me | 🔒 | Current user info |
-| GET | /users | 🔒 | List users |
-| GET | /users/{id} | 🔒 | Get user |
-| POST | /users | 🔒 | Create user |
-| PUT | /users | 🔒 | Update user |
-| DELETE | /users/{id} | 🔒 | Delete user |
-| GET | /companies | 🔒 | List companies |
-| GET | /companies/{id} | 🔒 | Get company |
-| POST | /companies | 🔒 | Create company |
-| PUT | /companies | 🔒 | Update company |
-| DELETE | /companies/{id} | 🔒 | Delete company |
-| GET | /roles | 🔒 | List roles |
-| GET | /roles/{id} | 🔒 | Get role |
-| POST | /roles | 🔒 | Create role |
-| PUT | /roles | 🔒 | Update role |
-| DELETE | /roles/{id} | 🔒 | Delete role |
-| GET | /permissions | 🔒 | List permissions |
-| GET | /permissions/{id} | 🔒 | Get permission |
-| POST | /permissions | 🔒 | Create permission |
-| PUT | /permissions | 🔒 | Update permission |
-| DELETE | /permissions/{id} | 🔒 | Delete permission |
-| POST | /files | 🔒 | Upload file (avatar / logo) |
-| GET | /dashboard | 🔒 | Dashboard summary counts |
+| Method | Endpoint          | Auth | Description                 |
+| ------ | ----------------- | ---- | --------------------------- |
+| POST   | /auth/login       | 🔓   | Login                       |
+| POST   | /auth/register    | 🔓   | Register                    |
+| POST   | /auth/refresh     | 🔓   | Refresh token               |
+| POST   | /auth/logout      | 🔒   | Logout                      |
+| GET    | /auth/me          | 🔒   | Current user info           |
+| GET    | /users            | 🔒   | List users                  |
+| GET    | /users/{id}       | 🔒   | Get user                    |
+| POST   | /users            | 🔒   | Create user                 |
+| PUT    | /users            | 🔒   | Update user                 |
+| DELETE | /users/{id}       | 🔒   | Delete user                 |
+| GET    | /companies        | 🔒   | List companies              |
+| GET    | /companies/{id}   | 🔒   | Get company                 |
+| POST   | /companies        | 🔒   | Create company              |
+| PUT    | /companies        | 🔒   | Update company              |
+| DELETE | /companies/{id}   | 🔒   | Delete company              |
+| GET    | /roles            | 🔒   | List roles                  |
+| GET    | /roles/{id}       | 🔒   | Get role                    |
+| POST   | /roles            | 🔒   | Create role                 |
+| PUT    | /roles            | 🔒   | Update role                 |
+| DELETE | /roles/{id}       | 🔒   | Delete role                 |
+| GET    | /permissions      | 🔒   | List permissions            |
+| GET    | /permissions/{id} | 🔒   | Get permission              |
+| POST   | /permissions      | 🔒   | Create permission           |
+| PUT    | /permissions      | 🔒   | Update permission           |
+| DELETE | /permissions/{id} | 🔒   | Delete permission           |
+| POST   | /files            | 🔒   | Upload file (avatar / logo) |
+| GET    | /dashboard        | 🔒   | Dashboard summary counts    |

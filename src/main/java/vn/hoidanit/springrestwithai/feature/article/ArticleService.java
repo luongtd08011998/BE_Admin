@@ -18,6 +18,8 @@ public interface ArticleService {
 
     ArticleResponse getBySlug(String slug);
 
+    ResultPaginationDTO search(String keyword, Pageable pageable);
+
     ResultPaginationDTO filter(ArticleFilterRequest filter, Pageable pageable);
 
     void delete(Long id);

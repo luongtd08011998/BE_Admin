@@ -135,6 +135,15 @@ public class ArticleServiceImpl implements ArticleService {
 
     @Override
     @Transactional(readOnly = true)
+    public ResultPaginationDTO search(String keyword, Pageable pageable) {
+        String normalizedKeyword = keyword != null ? keyword.trim() : null;
+        Page<ArticleResponse> pageResult = articleRepository.searchByKeyword(normalizedKeyword, pageable)
+                .map(ArticleResponse::fromEntity);
+        return ResultPaginationDTO.fromPage(pageResult);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public ResultPaginationDTO filter(ArticleFilterRequest filter, Pageable pageable) {
         PredicateSpecification<Article> spec = ArticleSpecification.build(filter);
         Page<ArticleResponse> pageResult = articleRepository.findBy(spec, q -> q.page(pageable))

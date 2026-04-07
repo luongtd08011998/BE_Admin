@@ -205,6 +205,27 @@ class ArticleControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
+        @Test
+        @DisplayName("GET /articles/search - 200: returns paginated search result")
+        void searchArticles_success_returns200() throws Exception {
+                articleRepository.save(buildArticle("Hướng dẫn Java", "huong-dan-java", testAuthor, null));
+
+                mockMvc.perform(get("/api/v1/articles/search")
+                                                .with(testDataFactory.jwtWithPermission())
+                                                .param("keyword", "huong dan"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.statusCode", is(200)))
+                                .andExpect(jsonPath("$.data.meta.total", is(1)));
+        }
+
+        @Test
+        @DisplayName("GET /articles/search - 401: no token returns unauthorized")
+        void searchArticles_noToken_returns401() throws Exception {
+                mockMvc.perform(get("/api/v1/articles/search")
+                                                .param("keyword", "java"))
+                                .andExpect(status().isUnauthorized());
+        }
+
     // ========== GET /api/v1/articles/{id} ==========
 
     @Test

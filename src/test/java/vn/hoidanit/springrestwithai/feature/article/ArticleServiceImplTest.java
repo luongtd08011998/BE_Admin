@@ -279,14 +279,47 @@ class ArticleServiceImplTest {
         ArticleFilterRequest filter = new ArticleFilterRequest(null);
 
         when(articleRepository.findBy(
-                any(org.springframework.data.jpa.domain.PredicateSpecification.class),
-                any(java.util.function.Function.class))).thenReturn(page);
+                org.mockito.ArgumentMatchers.<org.springframework.data.jpa.domain.PredicateSpecification<Article>>any(),
+                org.mockito.ArgumentMatchers.<java.util.function.Function<? super org.springframework.data.jpa.repository.JpaSpecificationExecutor.SpecificationFluentQuery<Article>, Page<Article>>>any()))
+                .thenReturn(page);
 
         ResultPaginationDTO result = articleService.filter(filter, PageRequest.of(0, 10));
 
         assertThat(result.meta().total()).isEqualTo(1);
         assertThat(result.result()).hasSize(1);
     }
+
+        // ========== search ==========
+
+        @Test
+        @DisplayName("search - success: returns paginated result by keyword")
+        void search_success_returnsPaginatedResult() {
+                User author = buildUser(1L, "Admin");
+                Article article = buildArticle(1L, "Hướng dẫn Java", "huong-dan-java", (byte) 0, (byte) 1, author, null, List.of());
+                Page<Article> page = new PageImpl<>(List.of(article), PageRequest.of(0, 10), 1);
+
+                when(articleRepository.searchByKeyword("huong dan", PageRequest.of(0, 10))).thenReturn(page);
+
+                ResultPaginationDTO result = articleService.search("  huong dan  ", PageRequest.of(0, 10));
+
+                assertThat(result.meta().total()).isEqualTo(1);
+                assertThat(result.result()).hasSize(1);
+                verify(articleRepository).searchByKeyword("huong dan", PageRequest.of(0, 10));
+        }
+
+        @Test
+        @DisplayName("search - null keyword: delegates to repository with null")
+        void search_nullKeyword_delegatesWithNull() {
+                Page<Article> page = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+
+                when(articleRepository.searchByKeyword(null, PageRequest.of(0, 10))).thenReturn(page);
+
+                ResultPaginationDTO result = articleService.search(null, PageRequest.of(0, 10));
+
+                assertThat(result.meta().total()).isZero();
+                assertThat(result.result()).isEmpty();
+                verify(articleRepository).searchByKeyword(null, PageRequest.of(0, 10));
+        }
 
     // ========== delete ==========
 

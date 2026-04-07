@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import vn.hoidanit.springrestwithai.dto.ApiResponse;
@@ -50,6 +51,14 @@ public class ArticleController {
     public ResponseEntity<ApiResponse<ArticleResponse>> getBySlug(@PathVariable String slug) {
         ArticleResponse response = articleService.getBySlug(slug);
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin bài viết thành công", response));
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<ResultPaginationDTO>> search(
+            @RequestParam(required = false) String keyword,
+            @ParameterObject Pageable pageable) {
+        ResultPaginationDTO result = articleService.search(keyword, pageable);
+        return ResponseEntity.ok(ApiResponse.success("Tìm kiếm bài viết thành công", result));
     }
 
     @PostMapping

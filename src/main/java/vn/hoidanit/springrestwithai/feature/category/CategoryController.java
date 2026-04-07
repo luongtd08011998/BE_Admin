@@ -90,6 +90,15 @@ public class CategoryController {
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin danh mục theo slug thành công", response));
     }
 
+    @GetMapping("/slug/{slug}/articles")
+    public ResponseEntity<ApiResponse<ResultPaginationDTO>> getArticlesByCategorySlug(
+            @PathVariable String slug,
+            @ParameterObject Pageable pageable) {
+        CategoryResponse category = categoryService.getBySlug(slug);
+        ResultPaginationDTO result = articleService.getArticlesByCategoryTree(category.id(), pageable);
+        return ResponseEntity.ok(ApiResponse.success("Lấy bài viết theo slug danh mục thành công", result));
+    }
+
     @GetMapping("/{id}/tree")
     public ResponseEntity<ApiResponse<CategoryTreeResponseDTO>> getCategoryTree(@PathVariable Long id) {
         CategoryTreeResponseDTO response = categoryService.getCategoryTree(id);
