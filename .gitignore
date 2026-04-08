@@ -19,7 +19,15 @@ target/
 *.iml
 *.ipr
 
-uploads
+# Ignore upload contents but keep folder structure
+uploads/**
+!uploads/.gitkeep
+!uploads/avatars/
+!uploads/avatars/.gitkeep
+!uploads/logos/
+!uploads/logos/.gitkeep
+!uploads/thumbnails/
+!uploads/thumbnails/.gitkeep
 
 ### NetBeans ###
 /nbproject/private/
