@@ -6,10 +6,16 @@ spring:
       pageable:
         one-indexed-parameters: true
   datasource:
-    url: jdbc:mysql://localhost:3306/hr_management?allowPublicKeyRetrieval=true&useSSL=false
-    username: root
-    password: 1234
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    primary:
+      jdbc-url: jdbc:mysql://localhost:3306/hr_management?allowPublicKeyRetrieval=true&useSSL=false
+      username: root
+      password: 1234
+      driver-class-name: com.mysql.cj.jdbc.Driver
+    qlkh:
+      jdbc-url: jdbc:mysql://103.15.51.97:3306/cm_20211018?allowPublicKeyRetrieval=true&useSSL=false&characterEncoding=UTF-8
+      username: luongtd
+      password: 1234
+      driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
       ddl-auto: update
@@ -22,7 +28,7 @@ spring:
 jwt:
   secret: hoidanitjwtsecretkeyHS256hoidanitjwtsecretkeyHS256hoidanitjwt
   #1000d
-  access-token-expiration: 86400000000
+  access-token-expiration: 35000000
   #7d
   refresh-expiration: 604800000
 

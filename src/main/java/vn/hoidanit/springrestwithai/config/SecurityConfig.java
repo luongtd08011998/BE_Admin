@@ -49,7 +49,8 @@ public class SecurityConfig {
             "/api/v1/auth/me",
             "/api/v1/auth/logout",
             "/api/v1/dashboard",
-            "/uploads/**"
+            "/uploads/**",
+            "/api/v1/qlkh/auth/login"
     };
 
     @Bean
@@ -82,8 +83,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(WHITELIST).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/articles/**").permitAll()
-        .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
-        .requestMatchers(HttpMethod.GET, "/api/v1/tags/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/tags/**").permitAll()
+                        .requestMatchers("/api/v1/qlkh/customers/me").authenticated()
+                        .requestMatchers("/api/v1/qlkh/invoices", "/api/v1/qlkh/invoices/**").authenticated()
                         .anyRequest().access(permissionAuthorizationManager))
 
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {
