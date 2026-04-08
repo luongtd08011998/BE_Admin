@@ -11,6 +11,7 @@ spring:
       username: root
       password: 1234
       driver-class-name: com.mysql.cj.jdbc.Driver
+    # DB thứ 2 (QLKH legacy — customer / monthinvoice / payment). Xem docs/decisions/databaseqlkh.md
     qlkh:
       jdbc-url: jdbc:mysql://103.15.51.97:3306/cm_20211018?allowPublicKeyRetrieval=true&useSSL=false&characterEncoding=UTF-8
       username: luongtd
@@ -27,9 +28,7 @@ spring:
 
 jwt:
   secret: hoidanitjwtsecretkeyHS256hoidanitjwtsecretkeyHS256hoidanitjwt
-  #1000d
   access-token-expiration: 35000000
-  #7d
   refresh-expiration: 604800000
 
 app:
@@ -47,6 +46,9 @@ app:
       - logos
       - thumbnails
   seed-data: false
+
+server:
+  port: 80
 
 springdoc:
   swagger-ui:

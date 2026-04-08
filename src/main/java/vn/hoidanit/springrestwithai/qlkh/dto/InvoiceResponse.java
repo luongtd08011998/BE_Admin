@@ -1,20 +1,18 @@
 package vn.hoidanit.springrestwithai.qlkh.dto;
 
+/**
+ * Hóa đơn theo tháng + thông tin hiển thị từ khách hàng (DigiCode, Name).
+ */
 public record InvoiceResponse(
-        Integer monthInvoiceId,
-        Integer customerId,
-        String yearMonth,
+        Integer id,
+        String digiCode,
+        String customerName,
         Double amount,
         Double envFee,
         Double taxFee,
-        Integer invStatus,
+        Double totalAmount,
         Integer paymentStatus,
         String paymentStatusLabel,
-        String createdDate,
-        String startDate,
-        String endDate,
         Integer oldVal,
-        Integer newVal,
-        String waterMeterSerial,
-        Integer numOfHouseHold
-) {}
+        Integer newVal) {
+}

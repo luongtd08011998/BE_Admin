@@ -1,17 +1,16 @@
 package vn.hoidanit.springrestwithai.qlkh.dto;
 
+/**
+ * Thông tin khách hàng sau đăng nhập — khớp các trường public trong databaseqlkh.md.
+ */
 public record CustomerLoginResponse(
-        Integer customerId,
-        String code,
         String digiCode,
         String name,
-        String shortName,
-        String phone,
         String address,
+        String phone,
         String email,
-        String contactName,
-        String contactPhone,
-        Double balance,
-        Integer status,
-        String accessToken
-) {}
+        String sms,
+        String taxCode,
+        Short isActive,
+        Short isWaterCut) {
+}

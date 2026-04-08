@@ -7,8 +7,22 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
-import org.springframework.security.oauth2.jwt.*;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+import org.springframework.security.oauth2.jwt.JwsHeader;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.time.Instant;
+
 import vn.hoidanit.springrestwithai.dto.ApiResponse;
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
 import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
@@ -18,8 +32,6 @@ import vn.hoidanit.springrestwithai.qlkh.dto.InvoiceResponse;
 import vn.hoidanit.springrestwithai.qlkh.dto.TokenResponse;
 import vn.hoidanit.springrestwithai.qlkh.entity.Customer;
 import vn.hoidanit.springrestwithai.qlkh.entity.MonthInvoice;
-
-import java.time.Instant;
 
 @RestController
 @RequestMapping("/api/v1/qlkh")
@@ -43,7 +55,9 @@ public class QlkhController {
         this.jwtDecoder = jwtDecoder;
     }
 
-    // 1. Đăng nhập bằng mã KH + SĐT
+    /**
+     * Bước 1: Đăng nhập bằng mã KH (DigiCode) + SĐT — nhận JWT để gọi các API sau.
+     */
     @PostMapping("/auth/login")
     public ResponseEntity<ApiResponse<TokenResponse>> login(
             @Valid @RequestBody CustomerLoginRequest request) {
@@ -55,15 +69,20 @@ public class QlkhController {
         return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công", new TokenResponse(token)));
     }
 
-    // 2. Lấy thông tin khách hàng (từ token)
+    /**
+     * Thông tin khách hàng đăng nhập (chỉ các trường public theo databaseqlkh.md).
+     */
     @GetMapping("/customers/me")
     public ResponseEntity<ApiResponse<CustomerLoginResponse>> getCustomer(
             @RequestHeader("Authorization") String authHeader) {
         Customer customer = getCustomerFromToken(authHeader);
-        return ResponseEntity.ok(ApiResponse.success("Lấy thông tin khách hàng thành công", toResponse(customer, null)));
+        return ResponseEntity.ok(ApiResponse.success("Lấy thông tin khách hàng thành công",
+                toCustomerResponse(customer)));
     }
 
-    // 3. Lấy danh sách hóa đơn (chỉ của khách hàng đã đăng nhập)
+    /**
+     * Danh sách hóa đơn theo khách hàng + trạng thái thanh toán; phân trang dạng meta + result.
+     */
     @GetMapping("/invoices")
     public ResponseEntity<ApiResponse<ResultPaginationDTO>> getInvoices(
             @RequestHeader("Authorization") String authHeader,
@@ -71,12 +90,11 @@ public class QlkhController {
         Customer customer = getCustomerFromToken(authHeader);
         Page<InvoiceResponse> page = monthInvoiceRepository
                 .findByCustomerId(customer.getCustomerId(), pageable)
-                .map(this::toInvoiceResponse);
+                .map(inv -> toInvoiceResponse(inv, customer));
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách hóa đơn thành công",
                 ResultPaginationDTO.fromPage(page)));
     }
 
-    // 4. Lấy chi tiết hóa đơn (kiểm tra thuộc về đúng khách hàng)
     @GetMapping("/invoices/{invoiceId}")
     public ResponseEntity<ApiResponse<InvoiceResponse>> getInvoice(
             @RequestHeader("Authorization") String authHeader,
@@ -88,10 +106,8 @@ public class QlkhController {
             throw new ResourceNotFoundException("Hóa đơn", "id", invoiceId);
         }
         return ResponseEntity.ok(ApiResponse.success("Lấy chi tiết hóa đơn thành công",
-                toInvoiceResponse(invoice)));
+                toInvoiceResponse(invoice, customer)));
     }
-
-    // ========== PRIVATE HELPERS ==========
 
     private String generateToken(Customer customer) {
         Instant now = Instant.now();
@@ -117,23 +133,56 @@ public class QlkhController {
                 .orElseThrow(() -> new ResourceNotFoundException("Khách hàng", "digiCode", digiCode));
     }
 
-    private CustomerLoginResponse toResponse(Customer c, String token) {
+    private CustomerLoginResponse toCustomerResponse(Customer c) {
         return new CustomerLoginResponse(
-                c.getCustomerId(), c.getCode(), c.getDigiCode(), c.getName(), c.getShortName(),
-                c.getPhone(), c.getAddress(), c.getEmail(),
-                c.getContactName(), c.getContactPhone(), c.getBalance(), c.getStatus(), token);
+                c.getDigiCode(),
+                c.getName(),
+                c.getAddress(),
+                c.getPhone(),
+                c.getEmail(),
+                c.getSms(),
+                c.getTaxCode(),
+                c.getIsActive(),
+                c.getIsWaterCut());
     }
 
-    private InvoiceResponse toInvoiceResponse(MonthInvoice inv) {
-        String label = (inv.getPaymentStatus() != null && inv.getPaymentStatus() == 1)
-                ? "Đã thanh toán"
-                : "Chưa thanh toán";
+    private InvoiceResponse toInvoiceResponse(MonthInvoice inv, Customer customer) {
+        Double amount = inv.getAmount();
+        Double envFee = inv.getEnvFee();
+        Double taxFee = inv.getTaxFee();
         return new InvoiceResponse(
-                inv.getMonthInvoiceId(), inv.getCustomerId(), inv.getYearMonth(),
-                inv.getAmount(), inv.getEnvFee(), inv.getTaxFee(),
-                inv.getInvStatus(), inv.getPaymentStatus(), label,
-                inv.getCreatedDate(), inv.getStartDate(), inv.getEndDate(),
-                inv.getOldVal(), inv.getNewVal(), inv.getWaterMeterSerial(),
-                inv.getNumOfHouseHold());
+                inv.getMonthInvoiceId(),
+                customer.getDigiCode(),
+                customer.getName(),
+                amount,
+                envFee,
+                taxFee,
+                totalInvoiceAmount(amount, envFee, taxFee),
+                inv.getPaymentStatus(),
+                paymentStatusLabel(inv.getPaymentStatus()),
+                inv.getOldVal(),
+                inv.getNewVal());
+    }
+
+    /** Tổng tiền: Amount + EnvFee + TaxFee (null coi như 0). */
+    private static double totalInvoiceAmount(Double amount, Double envFee, Double taxFee) {
+        double a = amount != null ? amount : 0d;
+        double e = envFee != null ? envFee : 0d;
+        double t = taxFee != null ? taxFee : 0d;
+        return a + e + t;
+    }
+
+    /**
+     * {@code PaymentStatus} legacy: 1 = chưa thanh toán, 2 = đã thanh toán; null hoặc mã khác → Không xác định.
+     */
+    private static String paymentStatusLabel(Integer paymentStatus) {
+        if (paymentStatus == null) {
+            return "Không xác định";
+        }
+        return switch (paymentStatus) {
+            case 1 -> "Chưa thanh toán";
+            case 2 -> "Đã thanh toán";
+            default -> "Không xác định";
+        };
     }
 }

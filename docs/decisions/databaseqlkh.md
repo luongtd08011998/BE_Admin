@@ -67,7 +67,11 @@
    CONSTRAINT `R_19` FOREIGN KEY (`RoadId`) REFERENCES `supportingtable` (`SupportingTableId`)
    ) ENGINE=InnoDB AUTO_INCREMENT=13612 DEFAULT CHARSET=utf8mb3;
    /*!40101 SET character*set_client = @saved_cs_client */;
-
+   DigiCode	Name	Address	Phone	Email	Sms	Taxcode	IsActive	IsWaterCut
+400021	CN Tổng Cty Khí Việt Nam-Cty Cổ Phần-Cty Chế Biến Khí Vũng Tàu	101 Lê Lợi, Phường Vũng Tàu, TP Hồ Chí Minh			913781581	3500102710-024	0	0
+400042	CN Tổng Cty Khí Việt Nam-Cty Cổ Phần-Cty Chế Biến Khí Vũng Tàu	101 Lê Lợi, Phường Vũng Tàu, TP Hồ Chí Minh			913781581	3500102710-024	0	0
+600018	Trường Cao đẳng Nghề Quốc Tế Vabis Hồng Lam	đường trường chinh, ấp vạn hạnh,Thị Xã Phú Mỹ, Tỉnh Bà Rịa - Vũng Tàu			0	3500799428	0	0
+entity: Chỉ Get ra những trường này : DigiCode	Name	Address	Phone	Email	Sms	Taxcode	IsActive	IsWaterCut
 --
 -- Table structure for table `monthinvoice`
 --
@@ -130,7 +134,11 @@ KEY `R_14` (`YearMonth`,`RoadId`),
 KEY `R_C_C_I_P` (`CustomerId`,`CreatedDate`,`InvStatus`,`PaymentStatus`)
 ) ENGINE=InnoDB AUTO_INCREMENT=803200 DEFAULT CHARSET=latin1;
 /*!40101 SET character*set_client = @saved_cs_client */;
-
+CustomerId	EnvFee	TaxFee	PaymentStatus	OldVal	NewVal
+2346	2650240	1325120	1	414380	417612
+2347	0	444850	1	43329	44414
+2353	0	0	2	0	0
+get ra trường này : CustomerId	EnvFee	TaxFee	PaymentStatus	OldVal	NewVal sau đó kết hop với bảng Customer lấy ra cac trường Digicode và name để hiển thị
 --
 -- Table structure for table `payment`
 --
@@ -191,3 +199,4 @@ hàm get: "data": {
     "statusCode": 200
 
 }
+đọc lại file và điều chỉnh lại các trường lấy cho hợp lí như tôi nêu o trên

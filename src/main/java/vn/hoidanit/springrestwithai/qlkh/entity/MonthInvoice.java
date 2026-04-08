@@ -1,7 +1,16 @@
 package vn.hoidanit.springrestwithai.qlkh.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
+/**
+ * Legacy bảng {@code monthinvoice} — chỉ map các cột dùng cho danh sách / trạng thái thanh toán
+ * (theo docs/decisions/databaseqlkh.md).
+ */
 @Entity
 @Table(name = "monthinvoice")
 public class MonthInvoice {
@@ -14,9 +23,6 @@ public class MonthInvoice {
     @Column(name = "CustomerId")
     private Integer customerId;
 
-    @Column(name = "YearMonth")
-    private String yearMonth;
-
     @Column(name = "Amount")
     private Double amount;
 
@@ -26,14 +32,8 @@ public class MonthInvoice {
     @Column(name = "TaxFee")
     private Double taxFee;
 
-    @Column(name = "InvStatus")
-    private Integer invStatus;
-
     @Column(name = "PaymentStatus")
     private Integer paymentStatus;
-
-    @Column(name = "CreatedDate")
-    private String createdDate;
 
     @Column(name = "OldVal")
     private Integer oldVal;
@@ -41,72 +41,67 @@ public class MonthInvoice {
     @Column(name = "NewVal")
     private Integer newVal;
 
-    @Column(name = "WaterMeterSerial")
-    private String waterMeterSerial;
+    public Integer getMonthInvoiceId() {
+        return monthInvoiceId;
+    }
 
-    @Column(name = "StubNum")
-    private String stubNum;
+    public void setMonthInvoiceId(Integer monthInvoiceId) {
+        this.monthInvoiceId = monthInvoiceId;
+    }
 
-    @Column(name = "NumOfHouseHold")
-    private Integer numOfHouseHold;
+    public Integer getCustomerId() {
+        return customerId;
+    }
 
-    @Column(name = "StartDate")
-    private String startDate;
+    public void setCustomerId(Integer customerId) {
+        this.customerId = customerId;
+    }
 
-    @Column(name = "EndDate")
-    private String endDate;
+    public Double getAmount() {
+        return amount;
+    }
 
-    @Column(name = "Status")
-    private Integer status;
+    public void setAmount(Double amount) {
+        this.amount = amount;
+    }
 
-    public Integer getMonthInvoiceId() { return monthInvoiceId; }
-    public void setMonthInvoiceId(Integer monthInvoiceId) { this.monthInvoiceId = monthInvoiceId; }
+    public Double getEnvFee() {
+        return envFee;
+    }
 
-    public Integer getCustomerId() { return customerId; }
-    public void setCustomerId(Integer customerId) { this.customerId = customerId; }
+    public void setEnvFee(Double envFee) {
+        this.envFee = envFee;
+    }
 
-    public String getYearMonth() { return yearMonth; }
-    public void setYearMonth(String yearMonth) { this.yearMonth = yearMonth; }
+    public Double getTaxFee() {
+        return taxFee;
+    }
 
-    public Double getAmount() { return amount; }
-    public void setAmount(Double amount) { this.amount = amount; }
+    public void setTaxFee(Double taxFee) {
+        this.taxFee = taxFee;
+    }
 
-    public Double getEnvFee() { return envFee; }
-    public void setEnvFee(Double envFee) { this.envFee = envFee; }
+    public Integer getPaymentStatus() {
+        return paymentStatus;
+    }
 
-    public Double getTaxFee() { return taxFee; }
-    public void setTaxFee(Double taxFee) { this.taxFee = taxFee; }
+    public void setPaymentStatus(Integer paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
 
-    public Integer getInvStatus() { return invStatus; }
-    public void setInvStatus(Integer invStatus) { this.invStatus = invStatus; }
+    public Integer getOldVal() {
+        return oldVal;
+    }
 
-    public Integer getPaymentStatus() { return paymentStatus; }
-    public void setPaymentStatus(Integer paymentStatus) { this.paymentStatus = paymentStatus; }
+    public void setOldVal(Integer oldVal) {
+        this.oldVal = oldVal;
+    }
 
-    public String getCreatedDate() { return createdDate; }
-    public void setCreatedDate(String createdDate) { this.createdDate = createdDate; }
+    public Integer getNewVal() {
+        return newVal;
+    }
 
-    public Integer getOldVal() { return oldVal; }
-    public void setOldVal(Integer oldVal) { this.oldVal = oldVal; }
-
-    public Integer getNewVal() { return newVal; }
-    public void setNewVal(Integer newVal) { this.newVal = newVal; }
-
-    public String getWaterMeterSerial() { return waterMeterSerial; }
-    public void setWaterMeterSerial(String waterMeterSerial) { this.waterMeterSerial = waterMeterSerial; }
-
-    public String getStubNum() { return stubNum; }
-    public void setStubNum(String stubNum) { this.stubNum = stubNum; }
-
-    public Integer getNumOfHouseHold() { return numOfHouseHold; }
-    public void setNumOfHouseHold(Integer numOfHouseHold) { this.numOfHouseHold = numOfHouseHold; }
-
-    public String getStartDate() { return startDate; }
-    public void setStartDate(String startDate) { this.startDate = startDate; }
-
-    public String getEndDate() { return endDate; }
-    public void setEndDate(String endDate) { this.endDate = endDate; }
-
-    public Integer getStatus() { return status; }
-    public void setStatus(Integer status) { this.status = status; }
+    public void setNewVal(Integer newVal) {
+        this.newVal = newVal;
+    }
 }
