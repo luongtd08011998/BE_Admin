@@ -11,6 +11,7 @@ import vn.hoidanit.springrestwithai.exception.DuplicateResourceException;
 import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
 import vn.hoidanit.springrestwithai.feature.company.Company;
 import vn.hoidanit.springrestwithai.feature.company.CompanyRepository;
+import vn.hoidanit.springrestwithai.feature.auth.RefreshTokenRepository;
 import vn.hoidanit.springrestwithai.feature.role.Role;
 import vn.hoidanit.springrestwithai.feature.role.RoleRepository;
 import vn.hoidanit.springrestwithai.feature.user.dto.CreateUserRequest;
@@ -32,15 +33,18 @@ public class UserServiceImpl implements UserService {
     private final CompanyRepository companyRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     public UserServiceImpl(UserRepository userRepository,
             CompanyRepository companyRepository,
             RoleRepository roleRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            RefreshTokenRepository refreshTokenRepository) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
+        this.refreshTokenRepository = refreshTokenRepository;
     }
 
     @Override
@@ -118,6 +122,7 @@ public class UserServiceImpl implements UserService {
         if (!userRepository.existsById(id)) {
             throw new ResourceNotFoundException("Người dùng", "id", id);
         }
+        refreshTokenRepository.deleteByUserId(id);
         userRepository.deleteById(id);
     }
 
