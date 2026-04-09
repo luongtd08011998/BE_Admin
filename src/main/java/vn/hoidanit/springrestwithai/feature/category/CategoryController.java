@@ -42,6 +42,12 @@ public class CategoryController {
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách danh mục thành công", result));
     }
 
+    @GetMapping("/roots")
+    public ResponseEntity<ApiResponse<List<CategoryResponse>>> getRootCategories() {
+        List<CategoryResponse> result = categoryService.getRootCategories();
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh mục gốc thành công", result));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<CategoryResponse>> getById(@PathVariable Long id) {
         CategoryResponse response = categoryService.getById(id);

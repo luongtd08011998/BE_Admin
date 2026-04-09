@@ -25,6 +25,8 @@ public interface CategoryService {
 
     List<CategoryResponse> getByParentId(Long parentId);
 
+    List<CategoryResponse> getRootCategories();
+
     CategoryResponse getBySlug(String slug);
 
     CategoryTreeResponseDTO getCategoryTree(Long id);

@@ -124,6 +124,14 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    public List<CategoryResponse> getRootCategories() {
+        return categoryRepository.findByParentIsNull()
+                .stream()
+                .map(CategoryResponse::fromEntity)
+                .toList();
+    }
+
+    @Override
     public CategoryResponse getBySlug(String slug) {
         Category category = categoryRepository.findBySlugIgnoreCase(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Danh mục", "slug", slug));
