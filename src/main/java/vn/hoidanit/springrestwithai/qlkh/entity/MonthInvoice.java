@@ -41,6 +41,18 @@ public class MonthInvoice {
     @Column(name = "NewVal")
     private Integer newVal;
 
+    @Column(name = "YearMonth")
+    private String yearMonth;
+
+    @Column(name = "CreatedDate")
+    private String createdDate;
+
+    @Column(name = "NumOfHouseHold")
+    private Integer numOfHouseHold;
+
+    @Column(name = "WaterMeterSerial")
+    private String waterMeterSerial;
+
     public Integer getMonthInvoiceId() {
         return monthInvoiceId;
     }
@@ -103,5 +115,37 @@ public class MonthInvoice {
 
     public void setNewVal(Integer newVal) {
         this.newVal = newVal;
+    }
+
+    public String getYearMonth() {
+        return yearMonth;
+    }
+
+    public void setYearMonth(String yearMonth) {
+        this.yearMonth = yearMonth;
+    }
+
+    public String getCreatedDate() {
+        return createdDate;
+    }
+
+    public void setCreatedDate(String createdDate) {
+        this.createdDate = createdDate;
+    }
+
+    public Integer getNumOfHouseHold() {
+        return numOfHouseHold;
+    }
+
+    public void setNumOfHouseHold(Integer numOfHouseHold) {
+        this.numOfHouseHold = numOfHouseHold;
+    }
+
+    public String getWaterMeterSerial() {
+        return waterMeterSerial;
+    }
+
+    public void setWaterMeterSerial(String waterMeterSerial) {
+        this.waterMeterSerial = waterMeterSerial;
     }
 }

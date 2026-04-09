@@ -4,7 +4,9 @@ import jakarta.validation.Valid;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
@@ -86,11 +89,21 @@ public class QlkhController {
     @GetMapping("/invoices")
     public ResponseEntity<ApiResponse<ResultPaginationDTO>> getInvoices(
             @RequestHeader("Authorization") String authHeader,
+            @RequestParam(required = false) String yearMonth,
             @ParameterObject Pageable pageable) {
         Customer customer = getCustomerFromToken(authHeader);
-        Page<InvoiceResponse> page = monthInvoiceRepository
-                .findByCustomerId(customer.getCustomerId(), pageable)
-                .map(inv -> toInvoiceResponse(inv, customer));
+        String ym = yearMonth != null ? yearMonth.trim() : "";
+        /* Kỳ mới nhất trước (yearMonth DESC), tie-break theo id hóa đơn */
+        Pageable pageableSorted = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Order.desc("yearMonth"), Sort.Order.desc("monthInvoiceId")));
+        Page<MonthInvoice> source = ym.isEmpty()
+                ? monthInvoiceRepository.findByCustomerIdExcludingZeroTotal(
+                        customer.getCustomerId(), pageableSorted)
+                : monthInvoiceRepository.findByCustomerIdAndYearMonthContainingExcludingZeroTotal(
+                        customer.getCustomerId(), ym, pageableSorted);
+        Page<InvoiceResponse> page = source.map(inv -> toInvoiceResponse(inv, customer));
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách hóa đơn thành công",
                 ResultPaginationDTO.fromPage(page)));
     }
@@ -154,6 +167,10 @@ public class QlkhController {
                 inv.getMonthInvoiceId(),
                 customer.getDigiCode(),
                 customer.getName(),
+                inv.getYearMonth(),
+                inv.getCreatedDate(),
+                inv.getNumOfHouseHold(),
+                inv.getWaterMeterSerial(),
                 amount,
                 envFee,
                 taxFee,

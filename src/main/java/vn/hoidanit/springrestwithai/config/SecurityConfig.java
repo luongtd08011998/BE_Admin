@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Arrays;
 
+import org.springframework.core.annotation.Order;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -73,7 +74,24 @@ public class SecurityConfig {
         return source;
     }
 
+    /**
+     * Chuỗi riêng cho đăng nhập QLKH — không gắn OAuth2 JWT.
+     * Nếu không tách, Bearer token cũ/sai vẫn bị Jwt filter xử lý → 401 dù permitAll.
+     */
     @Bean
+    @Order(1)
+    SecurityFilterChain qlkhAuthLoginChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/api/v1/qlkh/auth/login")
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+        return http.build();
+    }
+
+    @Bean
+    @Order(2)
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
