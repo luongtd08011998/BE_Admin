@@ -77,11 +77,23 @@ public class CategoryController {
         return ResponseEntity.ok(ApiResponse.success("Tìm kiếm danh mục thành công", result));
     }
 
+    /**
+     * Danh mục con <strong>trực tiếp</strong> (một cấp) của cha — không đệ quy xuống cháu.
+     */
     @GetMapping("/parent/{parentId}")
     public ResponseEntity<ApiResponse<List<CategoryResponse>>> getByParentId(
             @PathVariable Long parentId) {
         List<CategoryResponse> result = categoryService.getByParentId(parentId);
-        return ResponseEntity.ok(ApiResponse.success("Lấy danh mục con thành công", result));
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh mục con trực tiếp thành công", result));
+    }
+
+    /**
+     * Alias RESTful: cùng dữ liệu với {@code GET /parent/{id}} — chỉ con trực tiếp.
+     */
+    @GetMapping("/{id}/children")
+    public ResponseEntity<ApiResponse<List<CategoryResponse>>> getDirectChildren(@PathVariable Long id) {
+        List<CategoryResponse> result = categoryService.getByParentId(id);
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh mục con trực tiếp thành công", result));
     }
 
     @GetMapping("/slug/{slug}")
