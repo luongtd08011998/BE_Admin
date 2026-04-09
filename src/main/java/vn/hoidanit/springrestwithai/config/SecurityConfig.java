@@ -105,6 +105,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/tags/**").permitAll()
                         .requestMatchers("/api/v1/qlkh/customers/me").authenticated()
                         .requestMatchers("/api/v1/qlkh/invoices", "/api/v1/qlkh/invoices/**").authenticated()
+                        .requestMatchers("/api/v1/qlkh/sales-invoices", "/api/v1/qlkh/sales-invoices/**")
+                                .authenticated()
                         .anyRequest().access(permissionAuthorizationManager))
 
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {

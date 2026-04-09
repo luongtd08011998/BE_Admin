@@ -32,9 +32,11 @@ import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
 import vn.hoidanit.springrestwithai.qlkh.dto.CustomerLoginRequest;
 import vn.hoidanit.springrestwithai.qlkh.dto.CustomerLoginResponse;
 import vn.hoidanit.springrestwithai.qlkh.dto.InvoiceResponse;
+import vn.hoidanit.springrestwithai.qlkh.dto.SalesInvoiceResponse;
 import vn.hoidanit.springrestwithai.qlkh.dto.TokenResponse;
 import vn.hoidanit.springrestwithai.qlkh.entity.Customer;
 import vn.hoidanit.springrestwithai.qlkh.entity.MonthInvoice;
+import vn.hoidanit.springrestwithai.qlkh.entity.SalesInvoice;
 
 @RestController
 @RequestMapping("/api/v1/qlkh")
@@ -42,6 +44,7 @@ public class QlkhController {
 
     private final CustomerRepository customerRepository;
     private final MonthInvoiceRepository monthInvoiceRepository;
+    private final SalesInvoiceRepository salesInvoiceRepository;
     private final JwtEncoder jwtEncoder;
     private final JwtDecoder jwtDecoder;
 
@@ -50,10 +53,12 @@ public class QlkhController {
 
     public QlkhController(CustomerRepository customerRepository,
             MonthInvoiceRepository monthInvoiceRepository,
+            SalesInvoiceRepository salesInvoiceRepository,
             JwtEncoder jwtEncoder,
             JwtDecoder jwtDecoder) {
         this.customerRepository = customerRepository;
         this.monthInvoiceRepository = monthInvoiceRepository;
+        this.salesInvoiceRepository = salesInvoiceRepository;
         this.jwtEncoder = jwtEncoder;
         this.jwtDecoder = jwtDecoder;
     }
@@ -122,6 +127,43 @@ public class QlkhController {
                 toInvoiceResponse(invoice, customer)));
     }
 
+    /**
+     * Danh sách hóa đơn bán (salesinvoice) theo khách hàng; lọc tùy chọn theo mẫu số (templateCode).
+     */
+    @GetMapping("/sales-invoices")
+    public ResponseEntity<ApiResponse<ResultPaginationDTO>> getSalesInvoices(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(required = false) String templateCode,
+            @ParameterObject Pageable pageable) {
+        Customer customer = getCustomerFromToken(authHeader);
+        String tc = templateCode != null ? templateCode.trim() : "";
+        Pageable pageableSorted = PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Order.desc("salesInvoiceId")));
+        Page<SalesInvoice> source = tc.isEmpty()
+                ? salesInvoiceRepository.findByCustomerId(customer.getCustomerId(), pageableSorted)
+                : salesInvoiceRepository.findByCustomerIdAndTemplateCodeContaining(
+                        customer.getCustomerId(), tc, pageableSorted);
+        Page<SalesInvoiceResponse> page = source.map(inv -> toSalesInvoiceResponse(inv, customer));
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách hóa đơn bán thành công",
+                ResultPaginationDTO.fromPage(page)));
+    }
+
+    @GetMapping("/sales-invoices/{salesInvoiceId}")
+    public ResponseEntity<ApiResponse<SalesInvoiceResponse>> getSalesInvoice(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Integer salesInvoiceId) {
+        Customer customer = getCustomerFromToken(authHeader);
+        SalesInvoice invoice = salesInvoiceRepository.findById(salesInvoiceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Hóa đơn bán", "id", salesInvoiceId));
+        if (!invoice.getCustomerId().equals(customer.getCustomerId())) {
+            throw new ResourceNotFoundException("Hóa đơn bán", "id", salesInvoiceId);
+        }
+        return ResponseEntity.ok(ApiResponse.success("Lấy chi tiết hóa đơn bán thành công",
+                toSalesInvoiceResponse(invoice, customer)));
+    }
+
     private String generateToken(Customer customer) {
         Instant now = Instant.now();
         JwtClaimsSet claims = JwtClaimsSet.builder()
@@ -157,6 +199,19 @@ public class QlkhController {
                 c.getTaxCode(),
                 c.getIsActive(),
                 c.getIsWaterCut());
+    }
+
+    private SalesInvoiceResponse toSalesInvoiceResponse(SalesInvoice inv, Customer customer) {
+        return new SalesInvoiceResponse(
+                inv.getSalesInvoiceId(),
+                inv.getInvoiceNum(),
+                inv.getInvoiceDate(),
+                inv.getTemplateCode(),
+                customer.getDigiCode(),
+                customer.getName(),
+                inv.getAddress(),
+                inv.getInvoiceTotal(),
+                inv.getStatus());
     }
 
     private InvoiceResponse toInvoiceResponse(MonthInvoice inv, Customer customer) {
