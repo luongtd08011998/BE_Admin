@@ -1,5 +1,6 @@
 package vn.hoidanit.springrestwithai.config;
 
+import java.nio.file.Path;
 import java.util.List;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -16,6 +17,16 @@ public class FileUploadProperties {
 
     public String getBaseDir() {
         return baseDir;
+    }
+
+    /**
+     * Thư mục gốc lưu upload (đường dẫn tuyệt đối). Tránh lệch CWD giữa ghi file và {@code ResourceHandler}.
+     */
+    public Path getUploadRoot() {
+        if (baseDir == null || baseDir.isBlank()) {
+            throw new IllegalStateException("app.upload.base-dir must be set");
+        }
+        return Path.of(baseDir).toAbsolutePath().normalize();
     }
 
     public void setBaseDir(String baseDir) {

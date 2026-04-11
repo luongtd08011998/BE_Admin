@@ -28,7 +28,7 @@ public class FileServiceImpl implements FileService {
         String sanitizedName = sanitizeFileName(originalName);
         String storedName = System.currentTimeMillis() + "_" + sanitizedName;
 
-        Path targetDir = Path.of(uploadProperties.getBaseDir(), folder);
+        Path targetDir = uploadProperties.getUploadRoot().resolve(folder);
         try {
             Files.createDirectories(targetDir);
         } catch (IOException e) {
