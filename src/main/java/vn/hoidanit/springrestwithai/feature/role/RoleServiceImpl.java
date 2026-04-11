@@ -14,6 +14,7 @@ import vn.hoidanit.springrestwithai.feature.permission.PermissionRepository;
 import vn.hoidanit.springrestwithai.feature.role.dto.CreateRoleRequest;
 import vn.hoidanit.springrestwithai.feature.role.dto.RoleResponse;
 import vn.hoidanit.springrestwithai.feature.role.dto.UpdateRoleRequest;
+import vn.hoidanit.springrestwithai.security.PermissionAuthorizationManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,11 +26,14 @@ public class RoleServiceImpl implements RoleService {
 
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
+    private final PermissionAuthorizationManager permissionAuthorizationManager;
 
     public RoleServiceImpl(RoleRepository roleRepository,
-            PermissionRepository permissionRepository) {
+            PermissionRepository permissionRepository,
+            PermissionAuthorizationManager permissionAuthorizationManager) {
         this.roleRepository = roleRepository;
         this.permissionRepository = permissionRepository;
+        this.permissionAuthorizationManager = permissionAuthorizationManager;
     }
 
     @Override
@@ -47,6 +51,7 @@ public class RoleServiceImpl implements RoleService {
         role.setPermissions(permissions);
 
         Role saved = roleRepository.save(role);
+        permissionAuthorizationManager.loadCache();
         return RoleResponse.fromEntity(saved);
     }
 
@@ -67,6 +72,7 @@ public class RoleServiceImpl implements RoleService {
         role.setPermissions(permissions);
 
         Role saved = roleRepository.save(role);
+        permissionAuthorizationManager.loadCache();
         return RoleResponse.fromEntity(saved);
     }
 
@@ -93,6 +99,7 @@ public class RoleServiceImpl implements RoleService {
             throw new ResourceNotFoundException("Vai trò", "id", id);
         }
         roleRepository.deleteById(id);
+        permissionAuthorizationManager.loadCache();
     }
 
     private List<Permission> resolvePermissions(List<Long> permissionIds) {

@@ -18,6 +18,7 @@ import vn.hoidanit.springrestwithai.feature.permission.PermissionRepository;
 import vn.hoidanit.springrestwithai.feature.role.dto.CreateRoleRequest;
 import vn.hoidanit.springrestwithai.feature.role.dto.RoleResponse;
 import vn.hoidanit.springrestwithai.feature.role.dto.UpdateRoleRequest;
+import vn.hoidanit.springrestwithai.security.PermissionAuthorizationManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +41,9 @@ class RoleServiceImplTest {
 
     @Mock
     private PermissionRepository permissionRepository;
+
+    @Mock
+    private PermissionAuthorizationManager permissionAuthorizationManager;
 
     @InjectMocks
     private RoleServiceImpl roleService;
@@ -65,6 +69,7 @@ class RoleServiceImplTest {
         assertThat(response.permissions()).hasSize(1);
         assertThat(response.permissions().get(0).name()).isEqualTo("CREATE_USER");
         verify(roleRepository, times(1)).save(any(Role.class));
+        verify(permissionAuthorizationManager, times(1)).loadCache();
     }
 
     @Test
@@ -78,6 +83,7 @@ class RoleServiceImplTest {
                 .isInstanceOf(DuplicateResourceException.class);
 
         verify(roleRepository, never()).save(any());
+        verify(permissionAuthorizationManager, never()).loadCache();
     }
 
     @Test
@@ -94,6 +100,7 @@ class RoleServiceImplTest {
         assertThat(response.permissions()).isEmpty();
         verify(permissionRepository, never()).findAllById(any());
         verify(roleRepository, times(1)).save(any(Role.class));
+        verify(permissionAuthorizationManager, times(1)).loadCache();
     }
 
     @Test
@@ -110,6 +117,7 @@ class RoleServiceImplTest {
                 .hasMessageContaining("Quyền hạn");
 
         verify(roleRepository, never()).save(any());
+        verify(permissionAuthorizationManager, never()).loadCache();
     }
 
     // ========== update ==========
@@ -133,6 +141,7 @@ class RoleServiceImplTest {
         assertThat(response.description()).isEqualTo("new desc");
         assertThat(response.permissions()).hasSize(1);
         verify(roleRepository, times(1)).save(any(Role.class));
+        verify(permissionAuthorizationManager, times(1)).loadCache();
     }
 
     @Test
@@ -147,6 +156,7 @@ class RoleServiceImplTest {
                 .hasMessageContaining("Vai trò");
 
         verify(roleRepository, never()).save(any());
+        verify(permissionAuthorizationManager, never()).loadCache();
     }
 
     @Test
@@ -162,6 +172,7 @@ class RoleServiceImplTest {
                 .isInstanceOf(DuplicateResourceException.class);
 
         verify(roleRepository, never()).save(any());
+        verify(permissionAuthorizationManager, never()).loadCache();
     }
 
     @Test
@@ -180,6 +191,7 @@ class RoleServiceImplTest {
                 .hasMessageContaining("Quyền hạn");
 
         verify(roleRepository, never()).save(any());
+        verify(permissionAuthorizationManager, never()).loadCache();
     }
 
     // ========== getById ==========
@@ -245,6 +257,7 @@ class RoleServiceImplTest {
         roleService.delete(1L);
 
         verify(roleRepository, times(1)).deleteById(1L);
+        verify(permissionAuthorizationManager, times(1)).loadCache();
     }
 
     @Test
@@ -256,6 +269,7 @@ class RoleServiceImplTest {
                 .isInstanceOf(ResourceNotFoundException.class);
 
         verify(roleRepository, never()).deleteById(anyLong());
+        verify(permissionAuthorizationManager, never()).loadCache();
     }
 
     // ========== helpers ==========

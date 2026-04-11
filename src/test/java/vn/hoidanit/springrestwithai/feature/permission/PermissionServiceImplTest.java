@@ -16,6 +16,7 @@ import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
 import vn.hoidanit.springrestwithai.feature.permission.dto.CreatePermissionRequest;
 import vn.hoidanit.springrestwithai.feature.permission.dto.PermissionResponse;
 import vn.hoidanit.springrestwithai.feature.permission.dto.UpdatePermissionRequest;
+import vn.hoidanit.springrestwithai.security.PermissionAuthorizationManager;
 
 import java.util.List;
 import java.util.Optional;
@@ -34,6 +35,9 @@ class PermissionServiceImplTest {
 
     @Mock
     private PermissionRepository permissionRepository;
+
+    @Mock
+    private PermissionAuthorizationManager permissionAuthorizationManager;
 
     @InjectMocks
     private PermissionServiceImpl permissionService;
@@ -59,6 +63,7 @@ class PermissionServiceImplTest {
         assertThat(response.method()).isEqualTo("POST");
         assertThat(response.module()).isEqualTo("USER");
         verify(permissionRepository, times(1)).save(any(Permission.class));
+        verify(permissionAuthorizationManager, times(1)).loadCache();
     }
 
     @Test
@@ -73,6 +78,7 @@ class PermissionServiceImplTest {
                 .isInstanceOf(DuplicateResourceException.class);
 
         verify(permissionRepository, never()).save(any());
+        verify(permissionAuthorizationManager, never()).loadCache();
     }
 
     // ========== update ==========
@@ -95,6 +101,7 @@ class PermissionServiceImplTest {
         assertThat(response.apiPath()).isEqualTo("/api/v1/new");
         assertThat(response.method()).isEqualTo("PUT");
         verify(permissionRepository, times(1)).save(any(Permission.class));
+        verify(permissionAuthorizationManager, times(1)).loadCache();
     }
 
     @Test
@@ -109,6 +116,7 @@ class PermissionServiceImplTest {
                 .isInstanceOf(ResourceNotFoundException.class);
 
         verify(permissionRepository, never()).save(any());
+        verify(permissionAuthorizationManager, never()).loadCache();
     }
 
     @Test
@@ -126,6 +134,7 @@ class PermissionServiceImplTest {
                 .isInstanceOf(DuplicateResourceException.class);
 
         verify(permissionRepository, never()).save(any());
+        verify(permissionAuthorizationManager, never()).loadCache();
     }
 
     // ========== getById ==========
@@ -191,6 +200,7 @@ class PermissionServiceImplTest {
         permissionService.delete(1L);
 
         verify(permissionRepository, times(1)).deleteById(1L);
+        verify(permissionAuthorizationManager, times(1)).loadCache();
     }
 
     @Test
@@ -202,6 +212,7 @@ class PermissionServiceImplTest {
                 .isInstanceOf(ResourceNotFoundException.class);
 
         verify(permissionRepository, never()).deleteById(anyLong());
+        verify(permissionAuthorizationManager, never()).loadCache();
     }
 
     // ========== helpers ==========

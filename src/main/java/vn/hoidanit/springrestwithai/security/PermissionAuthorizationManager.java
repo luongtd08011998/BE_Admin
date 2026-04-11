@@ -1,6 +1,7 @@
 package vn.hoidanit.springrestwithai.security;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -79,13 +80,28 @@ public class PermissionAuthorizationManager
         return new AuthorizationDecision(false);
     }
 
-    @SuppressWarnings("unchecked")
+    /**
+     * JWT claim "roles" may be List, JSONArray-backed Collection, etc. — normalize to strings.
+     */
     private List<String> getUserRolesFromJwt(Authentication authentication) {
-        if (authentication instanceof JwtAuthenticationToken jwtToken) {
-            Object rolesClaim = jwtToken.getToken().getClaim("roles");
-            if (rolesClaim instanceof List<?> roles) {
-                return (List<String>) roles;
+        if (!(authentication instanceof JwtAuthenticationToken jwtToken)) {
+            return Collections.emptyList();
+        }
+        Object rolesClaim = jwtToken.getToken().getClaim("roles");
+        if (rolesClaim == null) {
+            return Collections.emptyList();
+        }
+        if (rolesClaim instanceof Collection<?> roles) {
+            List<String> out = new ArrayList<>();
+            for (Object o : roles) {
+                if (o != null) {
+                    out.add(o.toString());
+                }
             }
+            return out;
+        }
+        if (rolesClaim instanceof String s && !s.isBlank()) {
+            return List.of(s);
         }
         return Collections.emptyList();
     }
