@@ -25,8 +25,9 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = this.userRepository.findByEmail(email).orElseThrow(
-                () -> new UsernameNotFoundException("Không tìm thấy người dùng với email: " + email));
+        String normalized = email == null ? "" : email.trim();
+        User user = this.userRepository.findByEmail(normalized).orElseThrow(
+                () -> new UsernameNotFoundException("Không tìm thấy người dùng với email: " + normalized));
 
         List<GrantedAuthority> authorities = user.getRoles().stream()
                 .map(role -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getName()))

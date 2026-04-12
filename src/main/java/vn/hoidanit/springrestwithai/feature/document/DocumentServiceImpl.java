@@ -2,6 +2,7 @@ package vn.hoidanit.springrestwithai.feature.document;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -10,6 +11,7 @@ import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
 import vn.hoidanit.springrestwithai.feature.article.Article;
 import vn.hoidanit.springrestwithai.feature.article.ArticleRepository;
 import vn.hoidanit.springrestwithai.feature.document.dto.CreateDocumentRequest;
+import vn.hoidanit.springrestwithai.feature.document.dto.DocumentFilterRequest;
 import vn.hoidanit.springrestwithai.feature.document.dto.DocumentResponse;
 import vn.hoidanit.springrestwithai.feature.document.dto.UpdateDocumentRequest;
 
@@ -68,8 +70,9 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     @Transactional
-    public ResultPaginationDTO getAll(Pageable pageable) {
-        Page<DocumentResponse> pageResult = documentRepository.findAll(pageable)
+    public ResultPaginationDTO filter(DocumentFilterRequest filter, Pageable pageable) {
+        Specification<Document> spec = DocumentSpecification.build(filter);
+        Page<DocumentResponse> pageResult = documentRepository.findAll(spec, pageable)
                 .map(DocumentResponse::fromEntity);
         return ResultPaginationDTO.fromPage(pageResult);
     }

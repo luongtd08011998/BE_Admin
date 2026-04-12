@@ -13,7 +13,9 @@ import org.springframework.data.domain.PageRequest;
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
 import vn.hoidanit.springrestwithai.exception.DuplicateResourceException;
 import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
+import org.springframework.data.jpa.domain.Specification;
 import vn.hoidanit.springrestwithai.feature.tag.dto.CreateTagRequest;
+import vn.hoidanit.springrestwithai.feature.tag.dto.TagFilterRequest;
 import vn.hoidanit.springrestwithai.feature.tag.dto.TagResponse;
 import vn.hoidanit.springrestwithai.feature.tag.dto.UpdateTagRequest;
 
@@ -141,18 +143,18 @@ class TagServiceImplTest {
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
-    // ========== getAll ==========
+    // ========== filter ==========
 
     @Test
-    @DisplayName("getAll - returns paginated ResultPaginationDTO")
-    void getAll_returnsPaginatedResult() {
+    @DisplayName("filter - returns paginated ResultPaginationDTO")
+    void filter_returnsPaginatedResult() {
         Tag tag1 = buildTag(1L, "Java", "desc1");
         Tag tag2 = buildTag(2L, "Spring Boot", "desc2");
         Page<Tag> page = new PageImpl<>(List.of(tag1, tag2), PageRequest.of(0, 10), 2);
 
-        when(tagRepository.findAll(any(PageRequest.class))).thenReturn(page);
+        when(tagRepository.findAll(any(Specification.class), any(PageRequest.class))).thenReturn(page);
 
-        ResultPaginationDTO result = tagService.getAll(PageRequest.of(0, 10));
+        ResultPaginationDTO result = tagService.filter(new TagFilterRequest(null), PageRequest.of(0, 10));
 
         assertThat(result).isNotNull();
         assertThat(result.meta().total()).isEqualTo(2);

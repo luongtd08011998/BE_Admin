@@ -13,7 +13,9 @@ import org.springframework.data.domain.PageRequest;
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
 import vn.hoidanit.springrestwithai.exception.DuplicateResourceException;
 import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
+import org.springframework.data.jpa.domain.Specification;
 import vn.hoidanit.springrestwithai.feature.permission.dto.CreatePermissionRequest;
+import vn.hoidanit.springrestwithai.feature.permission.dto.PermissionFilterRequest;
 import vn.hoidanit.springrestwithai.feature.permission.dto.PermissionResponse;
 import vn.hoidanit.springrestwithai.feature.permission.dto.UpdatePermissionRequest;
 import vn.hoidanit.springrestwithai.security.PermissionAuthorizationManager;
@@ -160,18 +162,18 @@ class PermissionServiceImplTest {
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
-    // ========== getAll ==========
+    // ========== filter ==========
 
     @Test
-    @DisplayName("getAll - returns page with permissions")
-    void getAll_returnsPageOfPermissionResponse() {
+    @DisplayName("filter - returns page with permissions")
+    void filter_returnsPageOfPermissionResponse() {
         Permission p1 = buildPermission(1L, "CREATE_USER", "/api/v1/users", "POST", "USER");
         Permission p2 = buildPermission(2L, "DELETE_USER", "/api/v1/users/1", "DELETE", "USER");
         Page<Permission> page = new PageImpl<>(List.of(p1, p2), PageRequest.of(0, 10), 2);
 
-        when(permissionRepository.findAll(PageRequest.of(0, 10))).thenReturn(page);
+        when(permissionRepository.findAll(any(Specification.class), any(PageRequest.class))).thenReturn(page);
 
-        ResultPaginationDTO result = permissionService.getAll(PageRequest.of(0, 10));
+        ResultPaginationDTO result = permissionService.filter(new PermissionFilterRequest(null), PageRequest.of(0, 10));
 
         assertThat(result.meta().total()).isEqualTo(2);
         assertThat(result.meta().page()).isEqualTo(1);
@@ -179,12 +181,12 @@ class PermissionServiceImplTest {
     }
 
     @Test
-    @DisplayName("getAll - empty database: returns empty page")
-    void getAll_emptyDatabase_returnsEmptyPage() {
+    @DisplayName("filter - empty database: returns empty page")
+    void filter_emptyDatabase_returnsEmptyPage() {
         Page<Permission> emptyPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
-        when(permissionRepository.findAll(PageRequest.of(0, 10))).thenReturn(emptyPage);
+        when(permissionRepository.findAll(any(Specification.class), any(PageRequest.class))).thenReturn(emptyPage);
 
-        ResultPaginationDTO result = permissionService.getAll(PageRequest.of(0, 10));
+        ResultPaginationDTO result = permissionService.filter(new PermissionFilterRequest(null), PageRequest.of(0, 10));
 
         assertThat(result.result()).isEmpty();
         assertThat(result.meta().total()).isZero();

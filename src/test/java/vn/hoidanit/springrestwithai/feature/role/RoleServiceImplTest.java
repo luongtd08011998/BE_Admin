@@ -15,7 +15,9 @@ import vn.hoidanit.springrestwithai.exception.DuplicateResourceException;
 import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
 import vn.hoidanit.springrestwithai.feature.permission.Permission;
 import vn.hoidanit.springrestwithai.feature.permission.PermissionRepository;
+import org.springframework.data.jpa.domain.Specification;
 import vn.hoidanit.springrestwithai.feature.role.dto.CreateRoleRequest;
+import vn.hoidanit.springrestwithai.feature.role.dto.RoleFilterRequest;
 import vn.hoidanit.springrestwithai.feature.role.dto.RoleResponse;
 import vn.hoidanit.springrestwithai.feature.role.dto.UpdateRoleRequest;
 import vn.hoidanit.springrestwithai.security.PermissionAuthorizationManager;
@@ -217,18 +219,18 @@ class RoleServiceImplTest {
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
-    // ========== getAll ==========
+    // ========== filter ==========
 
     @Test
-    @DisplayName("getAll - returns page with roles")
-    void getAll_returnsPageOfRoleResponse() {
+    @DisplayName("filter - returns page with roles")
+    void filter_returnsPageOfRoleResponse() {
         Role r1 = buildRole(1L, "ADMIN", "Full access", List.of());
         Role r2 = buildRole(2L, "VIEWER", "Read only", List.of());
         Page<Role> page = new PageImpl<>(List.of(r1, r2), PageRequest.of(0, 10), 2);
 
-        when(roleRepository.findAll(PageRequest.of(0, 10))).thenReturn(page);
+        when(roleRepository.findAll(any(Specification.class), any(PageRequest.class))).thenReturn(page);
 
-        ResultPaginationDTO result = roleService.getAll(PageRequest.of(0, 10));
+        ResultPaginationDTO result = roleService.filter(new RoleFilterRequest(null), PageRequest.of(0, 10));
 
         assertThat(result.meta().total()).isEqualTo(2);
         assertThat(result.meta().page()).isEqualTo(1);
@@ -236,12 +238,12 @@ class RoleServiceImplTest {
     }
 
     @Test
-    @DisplayName("getAll - empty database: returns empty page")
-    void getAll_emptyDatabase_returnsEmptyPage() {
+    @DisplayName("filter - empty database: returns empty page")
+    void filter_emptyDatabase_returnsEmptyPage() {
         Page<Role> emptyPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
-        when(roleRepository.findAll(PageRequest.of(0, 10))).thenReturn(emptyPage);
+        when(roleRepository.findAll(any(Specification.class), any(PageRequest.class))).thenReturn(emptyPage);
 
-        ResultPaginationDTO result = roleService.getAll(PageRequest.of(0, 10));
+        ResultPaginationDTO result = roleService.filter(new RoleFilterRequest(null), PageRequest.of(0, 10));
 
         assertThat(result.result()).isEmpty();
         assertThat(result.meta().total()).isZero();

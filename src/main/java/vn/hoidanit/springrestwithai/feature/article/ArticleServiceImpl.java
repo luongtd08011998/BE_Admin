@@ -3,7 +3,7 @@ package vn.hoidanit.springrestwithai.feature.article;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.PredicateSpecification;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -145,8 +145,8 @@ public class ArticleServiceImpl implements ArticleService {
     @Override
     @Transactional(readOnly = true)
     public ResultPaginationDTO filter(ArticleFilterRequest filter, Pageable pageable) {
-        PredicateSpecification<Article> spec = ArticleSpecification.build(filter);
-        Page<ArticleResponse> pageResult = articleRepository.findBy(spec, q -> q.page(pageable))
+        Specification<Article> spec = ArticleSpecification.build(filter);
+        Page<ArticleResponse> pageResult = articleRepository.findAll(spec, pageable)
                 .map(ArticleResponse::fromEntity);
         return ResultPaginationDTO.fromPage(pageResult);
     }

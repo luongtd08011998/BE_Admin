@@ -11,7 +11,9 @@ import vn.hoidanit.springrestwithai.exception.DuplicateResourceException;
 import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
 import vn.hoidanit.springrestwithai.feature.permission.Permission;
 import vn.hoidanit.springrestwithai.feature.permission.PermissionRepository;
+import org.springframework.data.jpa.domain.Specification;
 import vn.hoidanit.springrestwithai.feature.role.dto.CreateRoleRequest;
+import vn.hoidanit.springrestwithai.feature.role.dto.RoleFilterRequest;
 import vn.hoidanit.springrestwithai.feature.role.dto.RoleResponse;
 import vn.hoidanit.springrestwithai.feature.role.dto.UpdateRoleRequest;
 import vn.hoidanit.springrestwithai.security.PermissionAuthorizationManager;
@@ -86,8 +88,9 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     @Transactional
-    public ResultPaginationDTO getAll(Pageable pageable) {
-        Page<RoleResponse> pageResult = roleRepository.findAll(pageable)
+    public ResultPaginationDTO filter(RoleFilterRequest filter, Pageable pageable) {
+        Specification<Role> spec = RoleSpecification.build(filter);
+        Page<RoleResponse> pageResult = roleRepository.findAll(spec, pageable)
                 .map(RoleResponse::fromEntity);
         return ResultPaginationDTO.fromPage(pageResult);
     }

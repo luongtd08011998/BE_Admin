@@ -8,7 +8,9 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
 import vn.hoidanit.springrestwithai.exception.DuplicateResourceException;
 import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
+import org.springframework.data.jpa.domain.Specification;
 import vn.hoidanit.springrestwithai.feature.tag.dto.CreateTagRequest;
+import vn.hoidanit.springrestwithai.feature.tag.dto.TagFilterRequest;
 import vn.hoidanit.springrestwithai.feature.tag.dto.TagResponse;
 import vn.hoidanit.springrestwithai.feature.tag.dto.UpdateTagRequest;
 
@@ -61,8 +63,9 @@ public class TagServiceImpl implements TagService {
     }
 
     @Override
-    public ResultPaginationDTO getAll(Pageable pageable) {
-        Page<TagResponse> pageResult = tagRepository.findAll(pageable)
+    public ResultPaginationDTO filter(TagFilterRequest filter, Pageable pageable) {
+        Specification<Tag> spec = TagSpecification.build(filter);
+        Page<TagResponse> pageResult = tagRepository.findAll(spec, pageable)
                 .map(TagResponse::fromEntity);
         return ResultPaginationDTO.fromPage(pageResult);
     }

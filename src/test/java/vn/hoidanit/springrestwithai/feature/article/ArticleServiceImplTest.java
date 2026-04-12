@@ -278,9 +278,9 @@ class ArticleServiceImplTest {
         Page<Article> page = new PageImpl<>(List.of(article), PageRequest.of(0, 10), 1);
         ArticleFilterRequest filter = new ArticleFilterRequest(null);
 
-        when(articleRepository.findBy(
-                org.mockito.ArgumentMatchers.<org.springframework.data.jpa.domain.PredicateSpecification<Article>>any(),
-                org.mockito.ArgumentMatchers.<java.util.function.Function<? super org.springframework.data.jpa.repository.JpaSpecificationExecutor.SpecificationFluentQuery<Article>, Page<Article>>>any()))
+        when(articleRepository.findAll(
+                any(org.springframework.data.jpa.domain.Specification.class),
+                any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(page);
 
         ResultPaginationDTO result = articleService.filter(filter, PageRequest.of(0, 10));

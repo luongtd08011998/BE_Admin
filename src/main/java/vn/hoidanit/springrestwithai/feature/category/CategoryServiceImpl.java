@@ -2,11 +2,13 @@ package vn.hoidanit.springrestwithai.feature.category;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
 import vn.hoidanit.springrestwithai.exception.DuplicateResourceException;
 import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
+import vn.hoidanit.springrestwithai.feature.category.dto.CategoryFilterRequest;
 import vn.hoidanit.springrestwithai.feature.category.dto.CategoryResponse;
 import vn.hoidanit.springrestwithai.feature.category.dto.CategoryTreeResponseDTO;
 import vn.hoidanit.springrestwithai.feature.category.dto.CreateCategoryRequest;
@@ -86,8 +88,9 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    public ResultPaginationDTO getAll(Pageable pageable) {
-        Page<CategoryResponse> pageResult = categoryRepository.findAll(pageable)
+    public ResultPaginationDTO filter(CategoryFilterRequest filter, Pageable pageable) {
+        Specification<Category> spec = CategorySpecification.build(filter);
+        Page<CategoryResponse> pageResult = categoryRepository.findAll(spec, pageable)
                 .map(CategoryResponse::fromEntity);
         return ResultPaginationDTO.fromPage(pageResult);
     }

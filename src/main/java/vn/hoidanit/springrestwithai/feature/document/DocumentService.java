@@ -4,6 +4,7 @@ import org.springframework.data.domain.Pageable;
 
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
 import vn.hoidanit.springrestwithai.feature.document.dto.CreateDocumentRequest;
+import vn.hoidanit.springrestwithai.feature.document.dto.DocumentFilterRequest;
 import vn.hoidanit.springrestwithai.feature.document.dto.DocumentResponse;
 import vn.hoidanit.springrestwithai.feature.document.dto.UpdateDocumentRequest;
 
@@ -17,7 +18,7 @@ public interface DocumentService {
 
     DocumentResponse getById(Long id);
 
-    ResultPaginationDTO getAll(Pageable pageable);
+    ResultPaginationDTO filter(DocumentFilterRequest filter, Pageable pageable);
 
     List<DocumentResponse> getByArticleId(Long articleId);
 

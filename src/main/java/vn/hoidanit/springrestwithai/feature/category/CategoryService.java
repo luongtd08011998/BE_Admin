@@ -17,7 +17,7 @@ public interface CategoryService {
 
     CategoryResponse getById(Long id);
 
-    ResultPaginationDTO getAll(Pageable pageable);
+    ResultPaginationDTO filter(vn.hoidanit.springrestwithai.feature.category.dto.CategoryFilterRequest filter, Pageable pageable);
 
     void delete(Long id);
 

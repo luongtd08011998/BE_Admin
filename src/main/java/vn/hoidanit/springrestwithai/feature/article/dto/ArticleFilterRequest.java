@@ -1,4 +1,4 @@
 package vn.hoidanit.springrestwithai.feature.article.dto;
 
-public record ArticleFilterRequest(String category) {
+public record ArticleFilterRequest(String keyword) {
 }

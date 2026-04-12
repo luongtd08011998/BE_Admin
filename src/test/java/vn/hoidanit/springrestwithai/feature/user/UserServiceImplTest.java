@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
 import vn.hoidanit.springrestwithai.exception.DuplicateResourceException;
 import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
+import vn.hoidanit.springrestwithai.feature.auth.RefreshTokenRepository;
 import vn.hoidanit.springrestwithai.feature.user.dto.UserFilterRequest;
 import vn.hoidanit.springrestwithai.feature.company.Company;
 import vn.hoidanit.springrestwithai.feature.company.CompanyRepository;
@@ -51,6 +52,9 @@ class UserServiceImplTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -192,9 +196,10 @@ class UserServiceImplTest {
                 buildUser(1L, "User A", "a@example.com"),
                 buildUser(2L, "User B", "b@example.com"));
         Page<User> page = new PageImpl<>(users);
-        UserFilterRequest filter = new UserFilterRequest(null, null, null, null, null, null);
-        when(userRepository.findBy(any(org.springframework.data.jpa.domain.PredicateSpecification.class),
-                any(java.util.function.Function.class))).thenReturn(page);
+        UserFilterRequest filter = new UserFilterRequest(null, null, null, null, null, null, null, null);
+        when(userRepository.findAll(
+                any(org.springframework.data.jpa.domain.Specification.class),
+                any(org.springframework.data.domain.Pageable.class))).thenReturn(page);
 
         ResultPaginationDTO result = userService.filter(filter, PageRequest.of(0, 10));
 

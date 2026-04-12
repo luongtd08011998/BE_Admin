@@ -19,7 +19,7 @@ import vn.hoidanit.springrestwithai.feature.user.dto.UpdateUserRequest;
 import vn.hoidanit.springrestwithai.feature.user.dto.UserFilterRequest;
 import vn.hoidanit.springrestwithai.feature.user.dto.UserResponse;
 
-import org.springframework.data.jpa.domain.PredicateSpecification;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -109,9 +109,8 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public ResultPaginationDTO filter(UserFilterRequest filter, Pageable pageable) {
-        PredicateSpecification<User> spec = UserSpecification.build(filter);
-        Page<UserResponse> pageResult = userRepository.findBy(spec,
-                q -> q.page(pageable))
+        Specification<User> spec = UserSpecification.build(filter);
+        Page<UserResponse> pageResult = userRepository.findAll(spec, pageable)
                 .map(UserResponse::fromEntity);
         return ResultPaginationDTO.fromPage(pageResult);
     }

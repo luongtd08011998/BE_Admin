@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import vn.hoidanit.springrestwithai.dto.ApiResponse;
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
 import vn.hoidanit.springrestwithai.feature.article.ArticleService;
+import vn.hoidanit.springrestwithai.feature.category.dto.CategoryFilterRequest;
 import vn.hoidanit.springrestwithai.feature.category.dto.CategoryResponse;
 import vn.hoidanit.springrestwithai.feature.category.dto.CategoryTreeResponseDTO;
 import vn.hoidanit.springrestwithai.feature.category.dto.CreateCategoryRequest;
@@ -37,8 +38,10 @@ public class CategoryController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<ResultPaginationDTO>> getAll(@ParameterObject Pageable pageable) {
-        ResultPaginationDTO result = categoryService.getAll(pageable);
+    public ResponseEntity<ApiResponse<ResultPaginationDTO>> filter(
+            @ParameterObject CategoryFilterRequest filter,
+            @ParameterObject Pageable pageable) {
+        ResultPaginationDTO result = categoryService.filter(filter, pageable);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách danh mục thành công", result));
     }
 

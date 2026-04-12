@@ -17,6 +17,7 @@ import vn.hoidanit.springrestwithai.dto.ApiResponse;
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
 import vn.hoidanit.springrestwithai.feature.article.ArticleService;
 import vn.hoidanit.springrestwithai.feature.tag.dto.CreateTagRequest;
+import vn.hoidanit.springrestwithai.feature.tag.dto.TagFilterRequest;
 import vn.hoidanit.springrestwithai.feature.tag.dto.TagResponse;
 import vn.hoidanit.springrestwithai.feature.tag.dto.UpdateTagRequest;
 
@@ -35,8 +36,10 @@ public class TagController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<ResultPaginationDTO>> getAll(@ParameterObject Pageable pageable) {
-        ResultPaginationDTO result = tagService.getAll(pageable);
+    public ResponseEntity<ApiResponse<ResultPaginationDTO>> filter(
+            @ParameterObject TagFilterRequest filter,
+            @ParameterObject Pageable pageable) {
+        ResultPaginationDTO result = tagService.filter(filter, pageable);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách tag thành công", result));
     }
 

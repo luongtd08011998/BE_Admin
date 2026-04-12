@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import vn.hoidanit.springrestwithai.dto.ApiResponse;
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
 import vn.hoidanit.springrestwithai.feature.role.dto.CreateRoleRequest;
+import vn.hoidanit.springrestwithai.feature.role.dto.RoleFilterRequest;
 import vn.hoidanit.springrestwithai.feature.role.dto.RoleResponse;
 import vn.hoidanit.springrestwithai.feature.role.dto.UpdateRoleRequest;
 
@@ -33,8 +34,10 @@ public class RoleController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<ResultPaginationDTO>> getAll(@ParameterObject Pageable pageable) {
-        ResultPaginationDTO result = roleService.getAll(pageable);
+    public ResponseEntity<ApiResponse<ResultPaginationDTO>> filter(
+            @ParameterObject RoleFilterRequest filter,
+            @ParameterObject Pageable pageable) {
+        ResultPaginationDTO result = roleService.filter(filter, pageable);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách vai trò thành công", result));
     }
 

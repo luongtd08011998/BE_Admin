@@ -45,7 +45,7 @@ app:
       - avatars
       - logos
       - thumbnails
-  seed-data: false
+  seed-data: true
 
 server:
   port: 8080

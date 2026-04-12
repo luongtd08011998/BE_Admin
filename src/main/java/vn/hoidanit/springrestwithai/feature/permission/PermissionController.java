@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import vn.hoidanit.springrestwithai.dto.ApiResponse;
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
 import vn.hoidanit.springrestwithai.feature.permission.dto.CreatePermissionRequest;
+import vn.hoidanit.springrestwithai.feature.permission.dto.PermissionFilterRequest;
 import vn.hoidanit.springrestwithai.feature.permission.dto.PermissionResponse;
 import vn.hoidanit.springrestwithai.feature.permission.dto.UpdatePermissionRequest;
 
@@ -33,8 +34,10 @@ public class PermissionController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<ResultPaginationDTO>> getAll(@ParameterObject Pageable pageable) {
-        ResultPaginationDTO result = permissionService.getAll(pageable);
+    public ResponseEntity<ApiResponse<ResultPaginationDTO>> filter(
+            @ParameterObject PermissionFilterRequest filter,
+            @ParameterObject Pageable pageable) {
+        ResultPaginationDTO result = permissionService.filter(filter, pageable);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách quyền hạn thành công", result));
     }
 

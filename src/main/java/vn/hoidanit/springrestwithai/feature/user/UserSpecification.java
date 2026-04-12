@@ -3,17 +3,32 @@ package vn.hoidanit.springrestwithai.feature.user;
 import java.util.ArrayList;
 import java.util.List;
 
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 
-import org.springframework.data.jpa.domain.PredicateSpecification;
+import org.springframework.data.jpa.domain.Specification;
 
+import vn.hoidanit.springrestwithai.feature.role.Role;
 import vn.hoidanit.springrestwithai.feature.user.dto.UserFilterRequest;
 
 public class UserSpecification {
 
-    public static PredicateSpecification<User> build(UserFilterRequest filter) {
-        return (from, cb) -> {
+    public static Specification<User> build(UserFilterRequest filter) {
+        return (from, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
+
+            // Avoid duplicate rows when joining ManyToMany
+            if (query != null) {
+                query.distinct(true);
+            }
+
+            if (filter.keyword() != null && !filter.keyword().isBlank()) {
+                String pattern = "%" + filter.keyword().toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(from.get("name")), pattern),
+                        cb.like(cb.lower(from.get("email")), pattern)));
+            }
 
             if (filter.name() != null && !filter.name().isBlank()) {
                 predicates.add(
@@ -46,6 +61,13 @@ public class UserSpecification {
             if (filter.gender() != null) {
                 predicates.add(
                         cb.equal(from.get("gender"), filter.gender()));
+            }
+
+            if (filter.roleName() != null && !filter.roleName().isBlank()) {
+                Join<User, Role> rolesJoin = from.join("roles", JoinType.INNER);
+                predicates.add(
+                        cb.like(cb.lower(rolesJoin.get("name")),
+                                "%" + filter.roleName().toLowerCase() + "%"));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));

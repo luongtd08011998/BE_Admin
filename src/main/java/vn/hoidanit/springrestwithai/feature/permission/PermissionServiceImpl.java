@@ -7,9 +7,11 @@ import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.jpa.domain.Specification;
 import vn.hoidanit.springrestwithai.exception.DuplicateResourceException;
 import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
 import vn.hoidanit.springrestwithai.feature.permission.dto.CreatePermissionRequest;
+import vn.hoidanit.springrestwithai.feature.permission.dto.PermissionFilterRequest;
 import vn.hoidanit.springrestwithai.feature.permission.dto.PermissionResponse;
 import vn.hoidanit.springrestwithai.feature.permission.dto.UpdatePermissionRequest;
 import vn.hoidanit.springrestwithai.security.PermissionAuthorizationManager;
@@ -75,8 +77,9 @@ public class PermissionServiceImpl implements PermissionService {
     }
 
     @Override
-    public ResultPaginationDTO getAll(Pageable pageable) {
-        Page<PermissionResponse> pageResult = permissionRepository.findAll(pageable)
+    public ResultPaginationDTO filter(PermissionFilterRequest filter, Pageable pageable) {
+        Specification<Permission> spec = PermissionSpecification.build(filter);
+        Page<PermissionResponse> pageResult = permissionRepository.findAll(spec, pageable)
                 .map(PermissionResponse::fromEntity);
         return ResultPaginationDTO.fromPage(pageResult);
     }

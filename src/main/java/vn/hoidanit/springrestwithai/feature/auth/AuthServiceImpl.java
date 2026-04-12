@@ -66,10 +66,13 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public LoginResponse login(LoginRequest request, String deviceInfo, String ipAddress) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email(), request.password()));
+        String email = request.email().trim();
+        String password = request.password();
 
-        User user = userRepository.findByEmail(request.email())
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(email, password));
+
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Người dùng", "email", request.email()));
 
         String rawAccessToken = generateAccessToken(authentication, user.getId());

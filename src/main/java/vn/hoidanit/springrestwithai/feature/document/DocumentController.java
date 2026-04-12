@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import vn.hoidanit.springrestwithai.dto.ApiResponse;
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
 import vn.hoidanit.springrestwithai.feature.document.dto.CreateDocumentRequest;
+import vn.hoidanit.springrestwithai.feature.document.dto.DocumentFilterRequest;
 import vn.hoidanit.springrestwithai.feature.document.dto.DocumentResponse;
 import vn.hoidanit.springrestwithai.feature.document.dto.UpdateDocumentRequest;
 
@@ -33,8 +34,10 @@ public class DocumentController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<ResultPaginationDTO>> getAll(@ParameterObject Pageable pageable) {
-        ResultPaginationDTO result = documentService.getAll(pageable);
+    public ResponseEntity<ApiResponse<ResultPaginationDTO>> filter(
+            @ParameterObject DocumentFilterRequest filter,
+            @ParameterObject Pageable pageable) {
+        ResultPaginationDTO result = documentService.filter(filter, pageable);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách tài liệu thành công", result));
     }
 
