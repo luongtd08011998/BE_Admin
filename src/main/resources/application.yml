@@ -47,6 +47,15 @@ app:
       - thumbnails
   seed-data: true
 
+# VNPT PortalService — SOAP downloadInvErrorFkey (xem news-site/docs/APIFKEY.md).
+# Cấu hình qua biến môi trường (xem .env.example). Map TVAN thường gặp: UserName→VNPT_PORTAL_USERNAME,
+# Password→VNPT_PORTAL_PASSWORD; Account/Acpass thường là kênh khác — xác nhận với VNPT nếu SOAP báo ERR:1.
+vnpt:
+  portal:
+    service-url: ${VNPT_PORTAL_SERVICE_URL:}
+    username: ${VNPT_PORTAL_USERNAME:}
+    password: ${VNPT_PORTAL_PASSWORD:}
+
 server:
   port: 8080
 

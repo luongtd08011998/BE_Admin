@@ -8,8 +8,14 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import vn.hoidanit.springrestwithai.qlkh.entity.MonthInvoice;
 
+import java.util.Optional;
+
 @Repository
 public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Integer> {
+
+    Optional<MonthInvoice> findByCustomerIdAndFkey(Integer customerId, String fkey);
+
+    Optional<MonthInvoice> findByCustomerIdAndRootKey(Integer customerId, String rootKey);
 
     @Query("""
             SELECT m FROM MonthInvoice m

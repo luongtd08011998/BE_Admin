@@ -107,6 +107,12 @@
 			<version>3.0.1</version>
 		</dependency>
 
+		<!-- Nạp file .env ở thư mục dự án (IDE không tự set VNPT_PORTAL_*). -->
+		<dependency>
+			<groupId>io.github.cdimascio</groupId>
+			<artifactId>dotenv-java</artifactId>
+			<version>3.0.2</version>
+		</dependency>
 
 	</dependencies>
 

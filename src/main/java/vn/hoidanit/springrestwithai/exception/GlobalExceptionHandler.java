@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import org.springframework.security.authentication.BadCredentialsException;
@@ -141,6 +143,22 @@ public class GlobalExceptionHandler {
                 log.warn("IllegalStateException: {}", ex.getMessage());
                 return ResponseEntity.status(HttpStatus.CONFLICT)
                                 .body(ApiResponse.conflict(ex.getMessage()));
+        }
+
+        /**
+         * {@link ResponseStatusException} (502/503 từ tích hợp VNPT, v.v.) — không được nuốt bởi
+         * {@link #handleGeneral(Exception)} thành 500.
+         */
+        @ExceptionHandler(ResponseStatusException.class)
+        public ResponseEntity<ApiResponse<Void>> handleResponseStatus(ResponseStatusException ex) {
+                HttpStatusCode status = ex.getStatusCode();
+                int code = status.value();
+                String reason = ex.getReason() != null ? ex.getReason() : ex.getMessage();
+                log.warn("ResponseStatusException {}: {}", code, reason);
+                HttpStatus resolved = HttpStatus.resolve(code);
+                String error = resolved != null ? resolved.getReasonPhrase() : ("HTTP " + code);
+                return ResponseEntity.status(status)
+                                .body(ApiResponse.ofError(code, reason, error));
         }
 
         // ========== CATCH-ALL ==========

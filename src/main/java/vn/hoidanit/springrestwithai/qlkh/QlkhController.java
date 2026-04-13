@@ -7,6 +7,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -24,7 +27,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Base64;
 
 import vn.hoidanit.springrestwithai.dto.ApiResponse;
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
@@ -37,6 +42,8 @@ import vn.hoidanit.springrestwithai.qlkh.dto.TokenResponse;
 import vn.hoidanit.springrestwithai.qlkh.entity.Customer;
 import vn.hoidanit.springrestwithai.qlkh.entity.MonthInvoice;
 import vn.hoidanit.springrestwithai.qlkh.entity.SalesInvoice;
+import vn.hoidanit.springrestwithai.qlkh.vnpt.VnptPortalInvoiceClient;
+import vn.hoidanit.springrestwithai.qlkh.vnpt.VnptPortalInvoiceClient.VnptDebugResult;
 
 @RestController
 @RequestMapping("/api/v1/qlkh")
@@ -45,6 +52,7 @@ public class QlkhController {
     private final CustomerRepository customerRepository;
     private final MonthInvoiceRepository monthInvoiceRepository;
     private final SalesInvoiceRepository salesInvoiceRepository;
+    private final VnptPortalInvoiceClient vnptPortalInvoiceClient;
     private final JwtEncoder jwtEncoder;
     private final JwtDecoder jwtDecoder;
 
@@ -54,11 +62,13 @@ public class QlkhController {
     public QlkhController(CustomerRepository customerRepository,
             MonthInvoiceRepository monthInvoiceRepository,
             SalesInvoiceRepository salesInvoiceRepository,
+            VnptPortalInvoiceClient vnptPortalInvoiceClient,
             JwtEncoder jwtEncoder,
             JwtDecoder jwtDecoder) {
         this.customerRepository = customerRepository;
         this.monthInvoiceRepository = monthInvoiceRepository;
         this.salesInvoiceRepository = salesInvoiceRepository;
+        this.vnptPortalInvoiceClient = vnptPortalInvoiceClient;
         this.jwtEncoder = jwtEncoder;
         this.jwtDecoder = jwtDecoder;
     }
@@ -89,7 +99,26 @@ public class QlkhController {
     }
 
     /**
+     * Debug nhanh kết nối VNPT PortalService (SOAP) theo fkey.
+     * Endpoint này yêu cầu JWT QLKH để tránh bị lạm dụng brute-force.
+     */
+    @GetMapping("/vnpt/health")
+    public ResponseEntity<ApiResponse<VnptDebugResult>> vnptHealth(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam String fkey) {
+        // Chỉ cần verify token hợp lệ.
+        getCustomerFromToken(authHeader);
+        String key = fkey != null ? fkey.trim() : "";
+        if (key.isEmpty()) {
+            throw new IllegalArgumentException("Tham số fkey không được để trống");
+        }
+        VnptDebugResult res = vnptPortalInvoiceClient.debugDownloadInvZipFkey(normalizeVnptFkey(key), false);
+        return ResponseEntity.ok(ApiResponse.success("Kiểm tra VNPT PortalService thành công", res));
+    }
+
+    /**
      * Danh sách hóa đơn theo khách hàng + trạng thái thanh toán; phân trang dạng meta + result.
+     * Tra theo {@code Fkey}/{@code RootKey} dùng {@link #getInvoiceByFkey} / {@link #getInvoiceByRootKey}.
      */
     @GetMapping("/invoices")
     public ResponseEntity<ApiResponse<ResultPaginationDTO>> getInvoices(
@@ -111,6 +140,86 @@ public class QlkhController {
         Page<InvoiceResponse> page = source.map(inv -> toInvoiceResponse(inv, customer));
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách hóa đơn thành công",
                 ResultPaginationDTO.fromPage(page)));
+    }
+
+    /**
+     * Tra cứu một hóa đơn theo {@code Fkey} (VNPT) — chỉ trả về nếu thuộc khách đang đăng nhập.
+     */
+    @GetMapping("/invoices/by-fkey")
+    public ResponseEntity<ApiResponse<InvoiceResponse>> getInvoiceByFkey(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam String fkey) {
+        Customer customer = getCustomerFromToken(authHeader);
+        String key = fkey != null ? fkey.trim() : "";
+        if (key.isEmpty()) {
+            throw new IllegalArgumentException("Tham số fkey không được để trống");
+        }
+        MonthInvoice invoice = monthInvoiceRepository
+                .findByCustomerIdAndFkey(customer.getCustomerId(), key)
+                .orElseThrow(() -> new ResourceNotFoundException("Hóa đơn", "fkey", key));
+        return ResponseEntity.ok(ApiResponse.success("Lấy hóa đơn theo fkey thành công",
+                toInvoiceResponse(invoice, customer)));
+    }
+
+    /**
+     * Tra cứu một hóa đơn theo {@code RootKey} — chỉ trả về nếu thuộc khách đang đăng nhập.
+     */
+    @GetMapping("/invoices/by-root-key")
+    public ResponseEntity<ApiResponse<InvoiceResponse>> getInvoiceByRootKey(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam String rootKey) {
+        Customer customer = getCustomerFromToken(authHeader);
+        String key = rootKey != null ? rootKey.trim() : "";
+        if (key.isEmpty()) {
+            throw new IllegalArgumentException("Tham số rootKey không được để trống");
+        }
+        MonthInvoice invoice = monthInvoiceRepository
+                .findByCustomerIdAndRootKey(customer.getCustomerId(), key)
+                .orElseThrow(() -> new ResourceNotFoundException("Hóa đơn", "rootKey", key));
+        return ResponseEntity.ok(ApiResponse.success("Lấy hóa đơn theo rootKey thành công",
+                toInvoiceResponse(invoice, customer)));
+    }
+
+    /**
+     * Tải file XML hóa đơn điện tử từ VNPT (SOAP {@code downloadInvErrorFkey}) — chỉ khi hóa đơn thuộc khách
+     * và đã có {@code Fkey}.
+     */
+    @GetMapping("/invoices/{invoiceId}/e-invoice-download")
+    public ResponseEntity<byte[]> downloadMonthEInvoiceXml(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Integer invoiceId) {
+        Customer customer = getCustomerFromToken(authHeader);
+        MonthInvoice invoice = monthInvoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Hóa đơn", "id", invoiceId));
+        if (!invoice.getCustomerId().equals(customer.getCustomerId())) {
+            throw new ResourceNotFoundException("Hóa đơn", "id", invoiceId);
+        }
+        String fkey = invoice.getFkey();
+        if (fkey == null || fkey.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Hóa đơn chưa có mã Fkey — chưa thể tải từ hệ thống hóa đơn điện tử.");
+        }
+        String vnptFkey = normalizeVnptFkey(fkey.trim());
+        String payload = vnptPortalInvoiceClient.downloadInvZipFkey(vnptFkey, false);
+        if (payload.startsWith("ERR:")) {
+            throw new IllegalArgumentException("VNPT: " + payload.trim());
+        }
+        String ymSafe = safeFilenameSegment(invoice.getYearMonth());
+        // downloadInvZipFkey thường trả base64 của file zip. Nếu decode được và đúng magic 'PK' thì trả zip.
+        byte[] body = tryDecodeZipBase64(payload);
+        boolean isZip = body != null && body.length >= 2 && body[0] == 'P' && body[1] == 'K';
+        if (!isZip) {
+            body = payload.getBytes(StandardCharsets.UTF_8);
+        }
+        String ext = isZip ? "zip" : "xml";
+        String filename = "hoadon-tien-nuoc-" + ymSafe + "-" + invoiceId + "." + ext;
+        ContentDisposition disposition = ContentDisposition.attachment()
+                .filename(filename, StandardCharsets.UTF_8)
+                .build();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .contentType(isZip ? MediaType.parseMediaType("application/zip") : MediaType.APPLICATION_XML)
+                .body(body);
     }
 
     @GetMapping("/invoices/{invoiceId}")
@@ -233,7 +342,45 @@ public class QlkhController {
                 inv.getPaymentStatus(),
                 paymentStatusLabel(inv.getPaymentStatus()),
                 inv.getOldVal(),
-                inv.getNewVal());
+                inv.getNewVal(),
+                inv.getRootKey(),
+                inv.getFkey());
+    }
+
+    /** Chỉ giữ ký tự an toàn cho tên file đính kèm (tránh ký tự đặc biệt / xuống dòng từ DB). */
+    private static String safeFilenameSegment(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "unknown";
+        }
+        String s = raw.trim().replaceAll("[^a-zA-Z0-9._-]+", "-");
+        return s.isEmpty() ? "unknown" : s;
+    }
+
+    /**
+     * VNPT yêu cầu fkey dạng TenantPrefix.Fkey, ví dụ {@code CNTOCTIEN.<Fkey>}.
+     * Nếu DB đã lưu đúng format (có dấu '.'), giữ nguyên.
+     */
+    private static String normalizeVnptFkey(String rawFkey) {
+        String t = rawFkey != null ? rawFkey.trim() : "";
+        if (t.isEmpty()) {
+            return t;
+        }
+        return t.contains(".") ? t : ("CNTOCTIEN." + t);
+    }
+
+    private static byte[] tryDecodeZipBase64(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String t = raw.trim();
+        if (t.isEmpty() || t.startsWith("<")) {
+            return null;
+        }
+        try {
+            return Base64.getDecoder().decode(t);
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
     }
 
     /** Tổng tiền: Amount + EnvFee + TaxFee (null coi như 0). */

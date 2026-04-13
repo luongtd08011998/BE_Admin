@@ -18,5 +18,7 @@ public record InvoiceResponse(
         Integer paymentStatus,
         String paymentStatusLabel,
         Integer oldVal,
-        Integer newVal) {
+        Integer newVal,
+        String rootKey,
+        String fkey) {
 }

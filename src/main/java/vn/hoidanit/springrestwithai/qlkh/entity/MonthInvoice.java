@@ -8,8 +8,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 /**
- * Legacy bảng {@code monthinvoice} — chỉ map các cột dùng cho danh sách / trạng thái thanh toán
- * (theo docs/decisions/databaseqlkh.md).
+ * Legacy bảng {@code monthinvoice} — map các cột dùng cho danh sách / trạng thái thanh toán
+ * và khóa tích hợp hóa đơn điện tử ({@code RootKey}, {@code Fkey}).
  */
 @Entity
 @Table(name = "monthinvoice")
@@ -52,6 +52,12 @@ public class MonthInvoice {
 
     @Column(name = "WaterMeterSerial")
     private String waterMeterSerial;
+
+    @Column(name = "RootKey", length = 30)
+    private String rootKey;
+
+    @Column(name = "Fkey", length = 36)
+    private String fkey;
 
     public Integer getMonthInvoiceId() {
         return monthInvoiceId;
@@ -147,5 +153,21 @@ public class MonthInvoice {
 
     public void setWaterMeterSerial(String waterMeterSerial) {
         this.waterMeterSerial = waterMeterSerial;
+    }
+
+    public String getRootKey() {
+        return rootKey;
+    }
+
+    public void setRootKey(String rootKey) {
+        this.rootKey = rootKey;
+    }
+
+    public String getFkey() {
+        return fkey;
+    }
+
+    public void setFkey(String fkey) {
+        this.fkey = fkey;
     }
 }
