@@ -3,6 +3,7 @@ package vn.hoidanit.springrestwithai.feature.article;
 import jakarta.validation.Valid;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -51,6 +52,12 @@ public class ArticleController {
     public ResponseEntity<ApiResponse<ArticleResponse>> getBySlug(@PathVariable String slug) {
         ArticleResponse response = articleService.getBySlug(slug);
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin bài viết thành công", response));
+    }
+
+    @PostMapping("/slug/{slug}/view")
+    public ResponseEntity<Void> recordView(@PathVariable String slug) {
+        articleService.incrementViewsBySlug(slug);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
     @GetMapping("/search")

@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -17,6 +18,10 @@ public interface ArticleRepository extends JpaRepository<Article, Long>, JpaSpec
         boolean existsBySlugAndIdNot(String slug, Long id);
 
         Optional<Article> findBySlug(String slug);
+
+        @Modifying(clearAutomatically = true, flushAutomatically = true)
+        @Query("UPDATE Article a SET a.views = a.views + 1 WHERE a.slug = :slug")
+        int incrementViewsBySlug(@Param("slug") String slug);
 
                 @Query(value = """
                                                         SELECT DISTINCT a.*

@@ -49,7 +49,7 @@ public class Article {
     private String thumbnail;
 
     @Column(nullable = false)
-    private byte type;   // 0=Tin tức, 1=Văn bản, 2=Video, 3=Gallery, 4=Khác
+    private byte type;   // 0=bài viết thường, 1=bài viết nổi bật, 2=tin tức
 
     private int views;
 

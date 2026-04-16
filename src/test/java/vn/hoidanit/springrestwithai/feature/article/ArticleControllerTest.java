@@ -24,6 +24,8 @@ import vn.hoidanit.springrestwithai.feature.user.UserRepository;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -225,6 +227,30 @@ class ArticleControllerTest {
                                                 .param("keyword", "java"))
                                 .andExpect(status().isUnauthorized());
         }
+
+    // ========== POST /api/v1/articles/slug/{slug}/view ==========
+
+    @Test
+    @DisplayName("POST /articles/slug/{slug}/view - 204: increments views without JWT")
+    void recordView_success_returns204() throws Exception {
+        Article saved = articleRepository.save(
+                buildArticle("View Test", "view-test-article", testAuthor, null));
+        assertEquals(0, saved.getViews());
+
+        mockMvc.perform(post("/api/v1/articles/slug/view-test-article/view"))
+                .andExpect(status().isNoContent());
+
+        Article updated = articleRepository.findById(saved.getId()).orElseThrow();
+        assertEquals(1, updated.getViews());
+    }
+
+    @Test
+    @DisplayName("POST /articles/slug/{slug}/view - 404: unknown slug")
+    void recordView_notFound_returns404() throws Exception {
+        mockMvc.perform(post("/api/v1/articles/slug/does-not-exist/view"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.statusCode", is(404)));
+    }
 
     // ========== GET /api/v1/articles/{id} ==========
 

@@ -276,7 +276,7 @@ class ArticleServiceImplTest {
         User author = buildUser(1L, "Admin");
         Article article = buildArticle(1L, "Title", "slug", (byte) 0, (byte) 1, author, null, List.of());
         Page<Article> page = new PageImpl<>(List.of(article), PageRequest.of(0, 10), 1);
-        ArticleFilterRequest filter = new ArticleFilterRequest(null);
+        ArticleFilterRequest filter = new ArticleFilterRequest(null, null);
 
         when(articleRepository.findAll(
                 any(org.springframework.data.jpa.domain.Specification.class),
