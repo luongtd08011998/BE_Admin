@@ -30,24 +30,16 @@ public class SpringRestWithAiApplication {
         Path root = Path.of(userDir);
         Path jarDir = resolveJarDir();
 
-<<<<<<< HEAD
-        Path[] candidates = {
-=======
-        // Cho phép chỉ định đường dẫn tường minh: java -Denv.file=C:\path\.env -jar app.jar
-        String explicitEnvFile = System.getProperty("env.file");
 
         Path[] candidates = {
                 explicitEnvFile != null ? Path.of(explicitEnvFile) : null,
                 jarDir != null ? jarDir.resolve(".env") : null,
->>>>>>> 4205755b1d681633814813430e3385b591f47503
+
                 root.resolve(".env"),
                 root.resolve("BE_Admin").resolve(".env"),
                 root.getParent() != null ? root.getParent().resolve(".env") : null,
                 root.getParent() != null ? root.getParent().resolve("BE_Admin").resolve(".env") : null,
-<<<<<<< HEAD
-                jarDir != null ? jarDir.resolve(".env") : null,
-=======
->>>>>>> 4205755b1d681633814813430e3385b591f47503
+
         };
         for (Path candidate : candidates) {
             if (candidate != null && Files.isRegularFile(candidate)) {
@@ -70,12 +62,9 @@ public class SpringRestWithAiApplication {
             }
         }
         log.warn("Không tìm thấy file .env (user.dir={}, jarDir={}). " +
-<<<<<<< HEAD
-                "VNPT portal sẽ không hoạt động nếu chưa set biến môi trường.", userDir, jarDir);
-=======
+
                 "Dùng: java -Denv.file=C:\\path\\.env -jar app.jar  " +
                 "hoặc set biến môi trường Windows.", userDir, jarDir);
->>>>>>> 4205755b1d681633814813430e3385b591f47503
     }
 
     private static Path resolveJarDir() {
@@ -90,8 +79,5 @@ public class SpringRestWithAiApplication {
             return null;
         }
     }
-<<<<<<< HEAD
+
 }
-=======
-}
->>>>>>> 4205755b1d681633814813430e3385b591f47503
