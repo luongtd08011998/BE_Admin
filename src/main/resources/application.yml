@@ -9,7 +9,7 @@ spring:
     primary:
       jdbc-url: jdbc:mysql://localhost:3306/hr_management?allowPublicKeyRetrieval=true&useSSL=false
       username: root
-      password: 1234
+      password: Kawasaki1
       driver-class-name: com.mysql.cj.jdbc.Driver
     # DB thứ 2 (QLKH legacy — customer / monthinvoice / payment). Xem docs/decisions/databaseqlkh.md
     qlkh:
