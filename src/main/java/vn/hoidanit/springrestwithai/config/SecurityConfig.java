@@ -21,6 +21,7 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -57,9 +58,16 @@ public class SecurityConfig {
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
+<<<<<<< HEAD
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000",
                 "http://125.253.121.171:3001", "http://125.253.121.171", "http://localhost:4173",
                 "http://125.253.121.171:3000", "https://yourdomain.com",
+=======
+        configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:4173",
+                "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:3002", "http://127.0.0.1:4173",
+                "http://125.253.121.171", "http://125.253.121.171:3000", "http://localhost:3001",
+>>>>>>> 4205755b1d681633814813430e3385b591f47503
                 "https://125.253.121.171", "https://125.253.121.171:3000", "https://125.253.121.171:3001"));
 
         configuration.setAllowedMethods(
@@ -102,6 +110,8 @@ public class SecurityConfig {
                         .requestMatchers(WHITELIST).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/articles/**").permitAll()
+                        .requestMatchers(new RegexRequestMatcher("^/api/v1/articles/slug/[^/]+/view$", "POST"))
+                                .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/tags/**").permitAll()
                         .requestMatchers("/api/v1/qlkh/customers/me").authenticated()

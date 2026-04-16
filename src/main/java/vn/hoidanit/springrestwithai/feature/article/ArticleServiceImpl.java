@@ -134,6 +134,15 @@ public class ArticleServiceImpl implements ArticleService {
     }
 
     @Override
+    @Transactional
+    public void incrementViewsBySlug(String slug) {
+        int updated = articleRepository.incrementViewsBySlug(slug);
+        if (updated == 0) {
+            throw new ResourceNotFoundException("Bài viết", "slug", slug);
+        }
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public ResultPaginationDTO search(String keyword, Pageable pageable) {
         String normalizedKeyword = keyword != null ? keyword.trim() : null;

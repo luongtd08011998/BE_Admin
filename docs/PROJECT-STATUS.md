@@ -1,6 +1,6 @@
 # Project Status
 
-> Last updated: 2026-03-02 | By: @hoidanit | Session: #3
+> Last updated: 2026-04-14 | By: @hoidanit | Session: #4
 >
 > AI: update this file at the end of every session when asked.
 > Follow this exact format. Keep it concise — under 80 lines.
@@ -46,6 +46,11 @@
 - ✅ **[2026-04-05]** Article integration tests — 16 tests (requires MySQL)
 - ✅ **[2026-04-05]** Article CONTEXT.md
 - ✅ **[2026-04-05]** DatabaseSeeder updated: 5 ARTICLE permissions + 3 seed articles
+
+- ✅ **[2026-04-14]** VNPT PortalService — `VnptPortalInvoiceClient` (SOAP `downloadInvZipFkey`), `VnptPortalProperties`, `QlkhController` endpoint tải hóa đơn ZIP
+- ✅ **[2026-04-14]** Dotenv loading — `DotenvEnvironmentPostProcessor` đăng ký đúng SPI (`META-INF/spring/org.springframework.boot.EnvironmentPostProcessor.imports`); load `.env` trong `main()` trước Spring khởi động (hỗ trợ `-Denv.file=`)
+- ✅ **[2026-04-14]** CORS — thêm origin `https://125.253.121.171` vào `SecurityConfig` cho môi trường production HTTPS
+- ✅ **[2026-04-14]** Deploy Windows Server — JAR chạy bằng `start.bat` với JVM args `-DVNPT_PORTAL_*`; Nginx reverse proxy với self-signed SSL (port 443); HTTP → HTTPS redirect
 
 ## In Progress
 _Nothing._
