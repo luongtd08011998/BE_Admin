@@ -51,14 +51,15 @@ public class SecurityConfig {
             "/api/v1/auth/logout",
             "/api/v1/dashboard",
             "/uploads/**",
-            "/api/v1/qlkh/auth/login"
+            "/api/v1/qlkh/auth/login",
+            "/api/v1/qlkh/month-invoices/**"
     };
 
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:4173",
+                "http://localhost:3000", "http://localhost:3001", "http://localhost:3003", "http://localhost:4173",
                 "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:3002", "http://127.0.0.1:4173",
                 "http://125.253.121.171", "http://125.253.121.171:3000", "http://localhost:3001",
                 "https://125.253.121.171", "https://125.253.121.171:3000", "https://125.253.121.171:3001","https://beta.toctienltd.vn"));
@@ -77,14 +78,15 @@ public class SecurityConfig {
     }
 
     /**
-     * Chuỗi riêng cho đăng nhập QLKH — không gắn OAuth2 JWT.
-     * Nếu không tách, Bearer token cũ/sai vẫn bị Jwt filter xử lý → 401 dù permitAll.
+     * Các route QLKH công khai — không gắn OAuth2 JWT.
+     * Nếu dùng chung chuỗi có {@code oauth2ResourceServer().jwt()}, Bearer token cũ/sai vẫn bị Jwt filter
+     * xử lý → 401 dù {@code permitAll} trên cùng URL.
      */
     @Bean
     @Order(1)
-    SecurityFilterChain qlkhAuthLoginChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain qlkhPublicNoJwtChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/api/v1/qlkh/auth/login")
+                .securityMatcher("/api/v1/qlkh/auth/login", "/api/v1/qlkh/month-invoices/**")
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

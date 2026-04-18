@@ -30,6 +30,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.List;
+import java.util.regex.Pattern;
 
 import vn.hoidanit.springrestwithai.dto.ApiResponse;
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
@@ -37,6 +39,7 @@ import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
 import vn.hoidanit.springrestwithai.qlkh.dto.CustomerLoginRequest;
 import vn.hoidanit.springrestwithai.qlkh.dto.CustomerLoginResponse;
 import vn.hoidanit.springrestwithai.qlkh.dto.InvoiceResponse;
+import vn.hoidanit.springrestwithai.qlkh.dto.MonthInvoiceReadingItemResponse;
 import vn.hoidanit.springrestwithai.qlkh.dto.SalesInvoiceResponse;
 import vn.hoidanit.springrestwithai.qlkh.dto.TokenResponse;
 import vn.hoidanit.springrestwithai.qlkh.entity.Customer;
@@ -58,6 +61,8 @@ public class QlkhController {
 
     @Value("${jwt.access-token-expiration}")
     private long accessTokenExpiration;
+
+    private static final Pattern YEAR_MONTH_PATTERN = Pattern.compile("^\\d{6}$");
 
     public QlkhController(CustomerRepository customerRepository,
             MonthInvoiceRepository monthInvoiceRepository,
@@ -114,6 +119,40 @@ public class QlkhController {
         }
         VnptDebugResult res = vnptPortalInvoiceClient.debugDownloadInvZipFkey(normalizeVnptFkey(key), false);
         return ResponseEntity.ok(ApiResponse.success("Kiểm tra VNPT PortalService thành công", res));
+    }
+
+    /**
+     * Chỉ số đồng hồ (OldVal/NewVal) theo một kỳ {@code yearMonth} hoặc khoảng kỳ (YYYYMM). Không yêu cầu JWT.
+     */
+    @GetMapping("/month-invoices/readings")
+    public ResponseEntity<ApiResponse<List<MonthInvoiceReadingItemResponse>>> getMonthInvoiceReadings(
+            @RequestParam(required = false) String yearMonth,
+            @RequestParam(required = false) String fromYearMonth,
+            @RequestParam(required = false) String toYearMonth) {
+        String ym = trimEmptyToNull(yearMonth);
+        String from = trimEmptyToNull(fromYearMonth);
+        String to = trimEmptyToNull(toYearMonth);
+        boolean hasYm = ym != null;
+        boolean hasFrom = from != null;
+        boolean hasTo = to != null;
+
+        if (hasYm && !hasFrom && !hasTo) {
+            requireValidYearMonth(ym, "yearMonth");
+            List<MonthInvoiceReadingItemResponse> rows = monthInvoiceRepository.findReadingsByYearMonth(ym);
+            return ResponseEntity.ok(ApiResponse.success("Lấy danh sách thành công", rows));
+        }
+        if (hasFrom && hasTo && !hasYm) {
+            requireValidYearMonth(from, "fromYearMonth");
+            requireValidYearMonth(to, "toYearMonth");
+            if (from.compareTo(to) > 0) {
+                throw new IllegalArgumentException("fromYearMonth phải nhỏ hơn hoặc bằng toYearMonth");
+            }
+            List<MonthInvoiceReadingItemResponse> rows =
+                    monthInvoiceRepository.findReadingsByYearMonthRange(from, to);
+            return ResponseEntity.ok(ApiResponse.success("Lấy danh sách thành công", rows));
+        }
+        throw new IllegalArgumentException(
+                "Chỉ định yearMonth=YYYYMM hoặc fromYearMonth=YYYYMM và toYearMonth=YYYYMM (đủ 6 chữ số)");
     }
 
     /**
@@ -345,6 +384,20 @@ public class QlkhController {
                 inv.getNewVal(),
                 inv.getRootKey(),
                 inv.getFkey());
+    }
+
+    private static String trimEmptyToNull(String s) {
+        if (s == null) {
+            return null;
+        }
+        String t = s.trim();
+        return t.isEmpty() ? null : t;
+    }
+
+    private static void requireValidYearMonth(String value, String paramName) {
+        if (!YEAR_MONTH_PATTERN.matcher(value).matches()) {
+            throw new IllegalArgumentException(paramName + " phải là YYYYMM (6 chữ số), ví dụ 202501");
+        }
     }
 
     /** Chỉ giữ ký tự an toàn cho tên file đính kèm (tránh ký tự đặc biệt / xuống dòng từ DB). */
