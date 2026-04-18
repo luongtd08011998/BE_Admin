@@ -79,14 +79,15 @@ public class SecurityConfig {
     }
 
     /**
-     * Chuỗi riêng cho đăng nhập QLKH — không gắn OAuth2 JWT.
-     * Nếu không tách, Bearer token cũ/sai vẫn bị Jwt filter xử lý → 401 dù permitAll.
+     * Các route QLKH công khai — không gắn OAuth2 JWT.
+     * Nếu dùng chung chuỗi có {@code oauth2ResourceServer().jwt()}, Bearer token cũ/sai vẫn bị Jwt filter
+     * xử lý → 401 dù {@code permitAll} trên cùng URL.
      */
     @Bean
     @Order(1)
-    SecurityFilterChain qlkhAuthLoginChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain qlkhPublicNoJwtChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/api/v1/qlkh/auth/login")
+                .securityMatcher("/api/v1/qlkh/auth/login", "/api/v1/qlkh/month-invoices/**")
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
