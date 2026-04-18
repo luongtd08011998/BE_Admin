@@ -29,6 +29,7 @@ public class SpringRestWithAiApplication {
         String userDir = System.getProperty("user.dir", ".");
         Path root = Path.of(userDir);
         Path jarDir = resolveJarDir();
+        String explicitEnvFile = System.getProperty("env.file");
 
 
         Path[] candidates = {
