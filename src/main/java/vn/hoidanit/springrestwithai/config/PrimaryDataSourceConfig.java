@@ -2,6 +2,7 @@ package vn.hoidanit.springrestwithai.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;
+import org.springframework.core.env.Environment;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -23,6 +24,12 @@ import java.util.Map;
 )
 public class PrimaryDataSourceConfig {
 
+    private final Environment environment;
+
+    public PrimaryDataSourceConfig(Environment environment) {
+        this.environment = environment;
+    }
+
     @Bean
     @Primary
     @ConfigurationProperties("spring.datasource.primary")
@@ -38,9 +45,11 @@ public class PrimaryDataSourceConfig {
         factory.setPackagesToScan("vn.hoidanit.springrestwithai.feature");
         factory.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
         Map<String, Object> props = new HashMap<>();
-        props.put("hibernate.hbm2ddl.auto", "update");
-        props.put("hibernate.show_sql", "true");
-        props.put("hibernate.dialect", "org.hibernate.dialect.MySQLDialect");
+        String ddlAuto = environment.getProperty("spring.jpa.hibernate.ddl-auto", "update");
+        String showSql = environment.getProperty("spring.jpa.show-sql", "true");
+        props.put("hibernate.hbm2ddl.auto", ddlAuto);
+        props.put("hibernate.hbm2ddl.halt_on_error", "false");
+        props.put("hibernate.show_sql", showSql);
         factory.setJpaPropertyMap(props);
         return factory;
     }

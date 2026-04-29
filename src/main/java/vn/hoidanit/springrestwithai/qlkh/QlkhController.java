@@ -36,6 +36,7 @@ import java.util.regex.Pattern;
 import vn.hoidanit.springrestwithai.dto.ApiResponse;
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
 import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
+import vn.hoidanit.springrestwithai.feature.article.ArticleService;
 import vn.hoidanit.springrestwithai.qlkh.dto.CustomerLoginRequest;
 import vn.hoidanit.springrestwithai.qlkh.dto.CustomerLoginResponse;
 import vn.hoidanit.springrestwithai.qlkh.dto.InvoiceResponse;
@@ -58,6 +59,7 @@ public class QlkhController {
     private final VnptPortalInvoiceClient vnptPortalInvoiceClient;
     private final JwtEncoder jwtEncoder;
     private final JwtDecoder jwtDecoder;
+    private final ArticleService articleService;
 
     @Value("${jwt.access-token-expiration}")
     private long accessTokenExpiration;
@@ -69,13 +71,15 @@ public class QlkhController {
             SalesInvoiceRepository salesInvoiceRepository,
             VnptPortalInvoiceClient vnptPortalInvoiceClient,
             JwtEncoder jwtEncoder,
-            JwtDecoder jwtDecoder) {
+            JwtDecoder jwtDecoder,
+            ArticleService articleService) {
         this.customerRepository = customerRepository;
         this.monthInvoiceRepository = monthInvoiceRepository;
         this.salesInvoiceRepository = salesInvoiceRepository;
         this.vnptPortalInvoiceClient = vnptPortalInvoiceClient;
         this.jwtEncoder = jwtEncoder;
         this.jwtDecoder = jwtDecoder;
+        this.articleService = articleService;
     }
 
     /**
@@ -310,6 +314,23 @@ public class QlkhController {
         }
         return ResponseEntity.ok(ApiResponse.success("Lấy chi tiết hóa đơn bán thành công",
                 toSalesInvoiceResponse(invoice, customer)));
+    }
+
+    /**
+     * Danh sách bài viết bảo trì cấp nước (tag "BaoTri-CupNuoc").
+     */
+    @GetMapping("/customer/articles/maintenance")
+    public ResponseEntity<ApiResponse<ResultPaginationDTO>> getMaintenanceArticles(
+            @ParameterObject Pageable pageable) {
+        ResultPaginationDTO result = articleService.getArticlesByTagName("BaoTri-CupNuoc", pageable);
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách bài viết bảo trì cấp nước thành công", result));
+    }
+
+    @GetMapping("/customer/articles/featured")
+    public ResponseEntity<ApiResponse<ResultPaginationDTO>> getFeaturedArticles(
+            @ParameterObject Pageable pageable) {
+        ResultPaginationDTO result = articleService.getFeaturedArticles(pageable);
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách bài viết nổi bật thành công", result));
     }
 
     private String generateToken(Customer customer) {

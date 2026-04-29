@@ -4,6 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,7 @@ import vn.hoidanit.springrestwithai.feature.tag.Tag;
 import vn.hoidanit.springrestwithai.feature.tag.TagRepository;
 import vn.hoidanit.springrestwithai.feature.user.User;
 import vn.hoidanit.springrestwithai.feature.user.UserRepository;
+import vn.hoidanit.springrestwithai.qlkh.NotificationService;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -33,18 +35,25 @@ import java.util.stream.Collectors;
 public class ArticleServiceImpl implements ArticleService {
 
     private final ArticleRepository articleRepository;
+
+    @Value("${app.base-url}")
+    private String appBaseUrl;
+
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
     private final TagRepository tagRepository;
+    private final NotificationService notificationService;
 
     public ArticleServiceImpl(ArticleRepository articleRepository,
             UserRepository userRepository,
             CategoryRepository categoryRepository,
-            TagRepository tagRepository) {
+            TagRepository tagRepository,
+            NotificationService notificationService) {
         this.articleRepository = articleRepository;
         this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
         this.tagRepository = tagRepository;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -77,6 +86,27 @@ public class ArticleServiceImpl implements ArticleService {
         article.setTagArticles(tagArticles);
 
         Article saved = articleRepository.save(article);
+
+        if (saved.getType() == (byte) 1) {
+            notificationService.broadcastSystemNotification(
+                    "Bài viết nổi bật mới",
+                    saved.getTitle(),
+                    "FEATURED",
+                    saved.getId()
+            );
+        }
+
+        boolean hasMaintenanceTag = saved.getTagArticles().stream()
+                .anyMatch(ta -> "BaoTri-CupNuoc".equals(ta.getTag().getName()));
+        if (hasMaintenanceTag) {
+            notificationService.broadcastSystemNotification(
+                    "Bài viết bảo trì mới",
+                    saved.getTitle(),
+                    "MAINTENANCE",
+                    saved.getId()
+            );
+        }
+
         return ArticleResponse.fromEntity(saved);
     }
 
@@ -196,6 +226,17 @@ public class ArticleServiceImpl implements ArticleService {
 
     @Override
     @Transactional(readOnly = true)
+    public ResultPaginationDTO getArticlesByTagName(String tagName, Pageable pageable) {
+        Tag tag = tagRepository.findByName(tagName)
+                .orElseThrow(() -> new ResourceNotFoundException("Tag", "name", tagName));
+
+        Page<ArticleResponse> pageResult = articleRepository.findDistinctByTagArticlesTagId(tag.getId(), pageable)
+                .map(article -> ArticleResponse.fromEntity(article, appBaseUrl));
+        return ResultPaginationDTO.fromPage(pageResult);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public ResultPaginationDTO getRelatedArticles(Long articleId, Pageable pageable) {
         Article current = articleRepository.findById(articleId)
                 .orElseThrow(() -> new ResourceNotFoundException("Bài viết", "id", articleId));
@@ -289,5 +330,13 @@ public class ArticleServiceImpl implements ArticleService {
         }
 
         return found;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ResultPaginationDTO getFeaturedArticles(Pageable pageable) {
+        Page<ArticleResponse> pageResult = articleRepository.findFeaturedArticles(pageable)
+                .map(article -> ArticleResponse.fromEntity(article, appBaseUrl));
+        return ResultPaginationDTO.fromPage(pageResult);
     }
 }

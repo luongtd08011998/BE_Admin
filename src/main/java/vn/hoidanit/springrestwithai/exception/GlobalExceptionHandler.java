@@ -65,6 +65,20 @@ public class GlobalExceptionHandler {
                                 .body(ApiResponse.conflict(ex.getMessage()));
         }
 
+        @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+        public ResponseEntity<ApiResponse<Void>> handleMaxSizeException(org.springframework.web.multipart.MaxUploadSizeExceededException exc) {
+                log.warn("MaxUploadSizeExceededException: {}", exc.getMessage());
+                return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                                .body(ApiResponse.badRequest("Kích thước file hoặc tổng request vượt quá giới hạn cho phép (File < 5MB, Tổng < 10MB)"));
+        }
+
+        @ExceptionHandler(org.springframework.web.multipart.MultipartException.class)
+        public ResponseEntity<ApiResponse<Void>> handleMultipartException(org.springframework.web.multipart.MultipartException exc) {
+                log.warn("MultipartException: {}", exc.getMessage());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.badRequest("Lỗi xử lý file đính kèm. Vui lòng kiểm tra lại định dạng gửi (chọn đúng multipart/form-data)"));
+        }
+
         // ========== SPRING MVC EXCEPTIONS ==========
 
         @ExceptionHandler(MethodArgumentTypeMismatchException.class)

@@ -59,4 +59,44 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
     List<MonthInvoiceReadingItemResponse> findReadingsByYearMonthRange(
             @Param("fromYm") String fromYearMonth,
             @Param("toYm") String toYearMonth);
+
+    /**
+     * Lấy danh sách hóa đơn có tổng tiền > 0 được tạo vào ngày {@code datePrefix}.
+     * {@code datePrefix} thường là "yyyy-MM-dd" hoặc "yyyyMMdd" tùy format lưu trong DB.
+     */
+    @Query("""
+            SELECT m FROM MonthInvoice m
+            WHERE m.createdDate LIKE CONCAT(:datePrefix, '%')
+            AND (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0)) <> 0
+            """)
+    Page<MonthInvoice> findByCreatedDatePrefix(@Param("datePrefix") String datePrefix, Pageable pageable);
+
+    /**
+     * Lấy hóa đơn có trạng thái ĐÃ THANH TOÁN (paymentStatus = 2) trong khoảng từ {@code fromYearMonth} trở về sau.
+     * {@code fromYearMonth} định dạng "YYYYMM", ví dụ "202602" — dùng để giới hạn 3 tháng gần nhất.
+     */
+    @Query("""
+            SELECT m FROM MonthInvoice m
+            WHERE m.paymentStatus = 2
+            AND m.yearMonth >= :fromYearMonth
+            AND (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0)) <> 0
+            """)
+    Page<MonthInvoice> findRecentPaidInvoices(@Param("fromYearMonth") String fromYearMonth, Pageable pageable);
+
+    /**
+     * Lấy hóa đơn đã thanh toán nhưng LOẠI TRỪ những invoice đã được thông báo.
+     * {@code excludeIds} là danh sách monthInvoiceId lấy từ bảng notified_payment (DB primary).
+     * Giảm số record load mỗi lần cron chạy từ ~24.000 xuống chỉ còn vài chục.
+     */
+    @Query("""
+            SELECT m FROM MonthInvoice m
+            WHERE m.paymentStatus = 2
+            AND m.yearMonth >= :fromYearMonth
+            AND (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0)) <> 0
+            AND m.monthInvoiceId NOT IN :excludeIds
+            """)
+    Page<MonthInvoice> findRecentPaidInvoicesExcluding(
+            @Param("fromYearMonth") String fromYearMonth,
+            @Param("excludeIds") List<Integer> excludeIds,
+            Pageable pageable);
 }

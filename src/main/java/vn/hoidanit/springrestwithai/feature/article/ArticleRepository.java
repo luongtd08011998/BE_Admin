@@ -57,4 +57,7 @@ public interface ArticleRepository extends JpaRepository<Article, Long>, JpaSpec
                "WHERE a.id != :id AND a.active = 1 AND a.category.id = :categoryId")
         List<Article> findRelatedArticlesByCategoryOnly(@Param("id") Long id,
                                                         @Param("categoryId") Long categoryId);
+
+        @Query("SELECT a FROM Article a WHERE a.type = 1 AND a.active = 1 ORDER BY a.createdAt DESC")
+        Page<Article> findFeaturedArticles(Pageable pageable);
 }

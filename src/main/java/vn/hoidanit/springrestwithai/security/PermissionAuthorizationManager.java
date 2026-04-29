@@ -48,6 +48,8 @@ public class PermissionAuthorizationManager
         this.rolePermissionsCache = cache;
     }
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PermissionAuthorizationManager.class);
+
     @Override
     public AuthorizationDecision authorize(
             Supplier<? extends Authentication> authSupplier,
@@ -77,6 +79,8 @@ public class PermissionAuthorizationManager
             }
         }
 
+        log.warn("Permission denied: path={} method={} roles={} cachedRoles={}",
+                requestPath, httpMethod, userRoles, rolePermissionsCache.keySet());
         return new AuthorizationDecision(false);
     }
 

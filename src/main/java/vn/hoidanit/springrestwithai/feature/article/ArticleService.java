@@ -30,5 +30,9 @@ public interface ArticleService {
 
     ResultPaginationDTO getArticlesByTag(Long tagId, Pageable pageable);
 
+    ResultPaginationDTO getArticlesByTagName(String tagName, Pageable pageable);
+
     ResultPaginationDTO getRelatedArticles(Long articleId, Pageable pageable);
+
+    ResultPaginationDTO getFeaturedArticles(Pageable pageable);
 }
