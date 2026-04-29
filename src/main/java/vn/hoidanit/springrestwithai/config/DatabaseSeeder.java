@@ -155,7 +155,15 @@ public class DatabaseSeeder implements CommandLineRunner {
                 createPermission("UPDATE_ARTICLE", "/api/v1/articles", "PUT", "ARTICLE"),
                 createPermission("DELETE_ARTICLE", "/api/v1/articles/{id}", "DELETE", "ARTICLE"),
                 createPermission("VIEW_ARTICLES", "/api/v1/articles", "GET", "ARTICLE"),
-                createPermission("VIEW_ARTICLE", "/api/v1/articles/{id}", "GET", "ARTICLE"));
+                createPermission("VIEW_ARTICLE", "/api/v1/articles/{id}", "GET", "ARTICLE"),
+
+                // FEEDBACK module
+                createPermission("VIEW_FEEDBACK_STATISTICS", "/api/v1/admin/feedbacks/statistics", "GET", "FEEDBACK"),
+                createPermission("VIEW_FEEDBACKS", "/api/v1/admin/feedbacks", "GET", "FEEDBACK"),
+                createPermission("VIEW_FEEDBACK", "/api/v1/admin/feedbacks/{id}", "GET", "FEEDBACK"),
+                createPermission("UPDATE_FEEDBACK_STATUS", "/api/v1/admin/feedbacks/{id}/status", "PUT", "FEEDBACK"),
+                createPermission("CREATE_FEEDBACK_REPLY", "/api/v1/admin/feedbacks/{id}/replies", "POST", "FEEDBACK"),
+                createPermission("VIEW_FEEDBACK_REPLIES", "/api/v1/admin/feedbacks/{id}/replies", "GET", "FEEDBACK"));
 
         List<Permission> saved = permissionRepository.saveAll(permissions);
         log.info("Seeded {} permissions", saved.size());

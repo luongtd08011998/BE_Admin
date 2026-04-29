@@ -18,7 +18,8 @@ public record ArticleResponse(
         CategoryInfo category,
         List<TagInfo> tags,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        String url
 ) {
     public record AuthorInfo(Long id, String name) {
     }
@@ -55,7 +56,19 @@ public record ArticleResponse(
                 categoryInfo,
                 tags,
                 article.getCreatedAt(),
-                article.getUpdatedAt()
+                article.getUpdatedAt(),
+                null
+        );
+    }
+
+    public static ArticleResponse fromEntity(Article article, String baseUrl) {
+        ArticleResponse base = fromEntity(article);
+        if (baseUrl == null || article.getSlug() == null) return base;
+        return new ArticleResponse(
+                base.id(), base.title(), base.slug(), base.content(), base.thumbnail(),
+                base.type(), base.views(), base.active(), base.author(), base.category(),
+                base.tags(), base.createdAt(), base.updatedAt(),
+                baseUrl + "/" + article.getSlug()
         );
     }
 }

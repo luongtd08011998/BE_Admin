@@ -48,11 +48,15 @@ public class SecurityConfig {
             "/api/v1/auth/login",
             "/api/v1/auth/register",
             "/api/v1/auth/refresh",
-            "/api/v1/auth/logout",
+            "/api/v1/articles/**",
+            "/api/v1/categories/**",
             "/api/v1/dashboard",
             "/uploads/**",
             "/api/v1/qlkh/auth/login",
-            "/api/v1/qlkh/month-invoices/**"
+            "/api/v1/qlkh/month-invoices/**",
+            "/api/v1/qlkh/customer/auth/login",
+            "/api/v1/qlkh/customer/articles/**",
+            "/api/v1/auth/me"
     };
 
     @Bean
@@ -87,7 +91,12 @@ public class SecurityConfig {
     @Order(1)
     SecurityFilterChain qlkhPublicNoJwtChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/api/v1/qlkh/auth/login", "/api/v1/qlkh/month-invoices/**")
+                .securityMatcher(
+                        "/api/v1/qlkh/auth/login",
+                        "/api/v1/qlkh/month-invoices/**",
+                        "/api/v1/qlkh/customer/auth/login",
+                        "/api/v1/qlkh/customer/articles/**"
+                )
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -104,17 +113,17 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(WHITELIST).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/articles/**").permitAll()
                         .requestMatchers(new RegexRequestMatcher("^/api/v1/articles/slug/[^/]+/view$", "POST"))
                                 .permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/tags/**").permitAll()
                         .requestMatchers("/api/v1/qlkh/customers/me").authenticated()
                         .requestMatchers("/api/v1/qlkh/invoices", "/api/v1/qlkh/invoices/**").authenticated()
                         .requestMatchers("/api/v1/qlkh/vnpt/**").authenticated()
                         .requestMatchers("/api/v1/qlkh/sales-invoices", "/api/v1/qlkh/sales-invoices/**")
                                 .authenticated()
+                        // Customer QLKH — device, notification & feedback (JWT required)
+                        .requestMatchers("/api/v1/qlkh/customer/device/**").authenticated()
+                        .requestMatchers("/api/v1/qlkh/customer/notifications/**").authenticated()
+                        .requestMatchers("/api/v1/qlkh/customer/feedbacks/**").authenticated()
                         .anyRequest().access(permissionAuthorizationManager))
 
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {

@@ -12,9 +12,14 @@ spring:
       password: 1234
       driver-class-name: com.mysql.cj.jdbc.Driver
     # DB thứ 2 (QLKH legacy — customer / monthinvoice / payment). Xem docs/decisions/databaseqlkh.md
+    # qlkh:
+    #   jdbc-url: jdbc:mysql://103.15.51.97:3306/cm_20211018?allowPublicKeyRetrieval=true&useSSL=false&characterEncoding=UTF-8
+    #   username: luongtd
+    #   password: 1234
+    #   driver-class-name: com.mysql.cj.jdbc.Driver
     qlkh:
-      jdbc-url: jdbc:mysql://103.15.51.97:3306/cm_20211018?allowPublicKeyRetrieval=true&useSSL=false&characterEncoding=UTF-8
-      username: luongtd
+      jdbc-url: jdbc:mysql://localhost:3306/cm_20211018?allowPublicKeyRetrieval=true&useSSL=false&characterEncoding=UTF-8
+      username: root
       password: 1234
       driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
@@ -26,12 +31,26 @@ spring:
       max-file-size: 5MB
       max-request-size: 10MB
 
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: luongtd0801@gmail.com
+    password: fwuzuodjygoqpyio
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
 jwt:
   secret: hoidanitjwtsecretkeyHS256hoidanitjwtsecretkeyHS256hoidanitjwt
   access-token-expiration: 35000000
   refresh-expiration: 604800000
 
 app:
+  base-url: http://localhost:3000/news
   upload:
     base-dir: ./uploads
     max-file-size: 5242880
@@ -45,7 +64,16 @@ app:
       - avatars
       - logos
       - thumbnails
+      - feedbacks
   seed-data: true
+  # Lịch chạy Cron Job gửi thông báo hóa đơn mới
+  # "0 */2 * * * *" = mỗi 2 phút quét 1 lần
+  invoice-notify:
+    cron: "0 */2 * * * *"
+  # Lịch chạy Cron Job phát hiện hóa đơn vừa thanh toán và gửi thông báo
+  # "0 */2 * * * *" = mỗi 2 phút quét 1 lần (lệch 1 phút so với invoice để tránh tranh chấp)
+  payment-notify:
+    cron: "0 1/2 * * * *"
 
 # VNPT PortalService — SOAP downloadInvErrorFkey (xem news-site/docs/APIFKEY.md).
 # Cấu hình qua biến môi trường (xem .env.example). Map TVAN thường gặp: UserName→VNPT_PORTAL_USERNAME,
