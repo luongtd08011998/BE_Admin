@@ -49,7 +49,7 @@ jwt:
   access-token-expiration: 35000000
   refresh-expiration: 604800000
   # Refresh Token cho QLKH Mobile — 30 ngày
-  qlkh-refresh-token-expiration: 2592000000
+  qlkh-refresh-token-expiration: 5550400000
 
 app:
   base-url: http://localhost:3000/news
