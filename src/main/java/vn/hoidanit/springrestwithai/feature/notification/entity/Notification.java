@@ -24,9 +24,16 @@ public class Notification {
     @Column(name = "content", columnDefinition = "TEXT")
     private String content;
 
-    /** INVOICE hoặc PAYMENT */
+    /** INVOICE hoặc PAYMENT hoặc FEEDBACK */
     @Column(name = "type", length = 50)
     private String type;
+
+    /**
+     * ID tham chiếu đến đối tượng liên quan (feedbackId khi type=FEEDBACK).
+     * Dùng để Mobile deep link đến đúng màn hình chi tiết.
+     */
+    @Column(name = "reference_id")
+    private Long referenceId;
 
     @Column(name = "is_read")
     private Boolean isRead = false;
@@ -61,6 +68,10 @@ public class Notification {
     public String getType() { return type; }
 
     public void setType(String type) { this.type = type; }
+
+    public Long getReferenceId() { return referenceId; }
+
+    public void setReferenceId(Long referenceId) { this.referenceId = referenceId; }
 
     public Boolean getIsRead() { return isRead; }
 

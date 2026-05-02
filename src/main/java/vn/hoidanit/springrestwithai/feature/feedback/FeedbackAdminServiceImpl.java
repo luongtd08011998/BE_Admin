@@ -17,6 +17,7 @@ import vn.hoidanit.springrestwithai.feature.feedback.entity.IssueType;
 import vn.hoidanit.springrestwithai.feature.user.User;
 import vn.hoidanit.springrestwithai.feature.user.UserRepository;
 import vn.hoidanit.springrestwithai.qlkh.CustomerRepository;
+import vn.hoidanit.springrestwithai.qlkh.NotificationService;
 import vn.hoidanit.springrestwithai.qlkh.entity.Customer;
 
 import java.time.LocalDateTime;
@@ -32,15 +33,18 @@ public class FeedbackAdminServiceImpl implements FeedbackAdminService {
     private final FeedbackReplyRepository feedbackReplyRepository;
     private final UserRepository userRepository;
     private final CustomerRepository customerRepository;
+    private final NotificationService notificationService;
 
     public FeedbackAdminServiceImpl(FeedbackRepository feedbackRepository,
             FeedbackReplyRepository feedbackReplyRepository,
             UserRepository userRepository,
-            CustomerRepository customerRepository) {
+            CustomerRepository customerRepository,
+            NotificationService notificationService) {
         this.feedbackRepository = feedbackRepository;
         this.feedbackReplyRepository = feedbackReplyRepository;
         this.userRepository = userRepository;
         this.customerRepository = customerRepository;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -98,6 +102,14 @@ public class FeedbackAdminServiceImpl implements FeedbackAdminService {
         log.info("Cập nhật trạng thái phản ánh {} từ {} thành {}",
                 feedback.getTrackingCode(), oldStatus, request.status());
 
+        // Gửi thông báo Push FCM đến khách hàng
+        try {
+            notificationService.notifyFeedbackStatusChanged(feedback, request.status());
+        } catch (Exception e) {
+            log.error("Failed to send feedback status notification for feedbackId={}: {}",
+                    feedback.getId(), e.getMessage());
+        }
+
         Customer customer = findCustomerByDigiCode(feedback.getDigiCode());
         FeedbackAdminResponse.CustomerInfo customerInfo = buildCustomerInfo(customer);
         int replyCount = feedbackReplyRepository.findByFeedbackIdOrderByCreatedAtAsc(feedback.getId()).size();
@@ -120,6 +132,14 @@ public class FeedbackAdminServiceImpl implements FeedbackAdminService {
         reply = feedbackReplyRepository.save(reply);
 
         log.info("Nhân viên {} thêm phản hồi cho phản ánh {}", staff.getEmail(), feedback.getTrackingCode());
+
+        // Gửi thông báo Push FCM đến khách hàng
+        try {
+            notificationService.notifyFeedbackReply(feedback, request.content());
+        } catch (Exception e) {
+            log.error("Failed to send feedback reply notification for feedbackId={}: {}",
+                    feedbackId, e.getMessage());
+        }
 
         return FeedbackReplyResponse.fromEntity(reply);
     }

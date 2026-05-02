@@ -87,6 +87,47 @@ public class FirebaseService {
     }
 
     /**
+     * Gửi multicast kèm data payload (dùng cho FEEDBACK deep link).
+     */
+    public void sendToMultipleTokensWithData(List<String> tokens, String title, String body,
+            java.util.Map<String, String> data) {
+        if (tokens == null || tokens.isEmpty()) {
+            log.debug("FCM multicast with data skipped — no tokens.");
+            return;
+        }
+        try {
+            MulticastMessage.Builder builder = MulticastMessage.builder()
+                    .addAllTokens(tokens)
+                    .setNotification(Notification.builder()
+                            .setTitle(title)
+                            .setBody(body)
+                            .build());
+            if (data != null && !data.isEmpty()) {
+                builder.putAllData(data);
+            }
+            var result = FirebaseMessaging.getInstance().sendEachForMulticast(builder.build());
+            log.info("FCM multicast with data: successCount={} failureCount={}",
+                    result.getSuccessCount(), result.getFailureCount());
+            if (result.getFailureCount() > 0) {
+                result.getResponses().forEach(r -> {
+                    if (!r.isSuccessful()) {
+                        log.warn("FCM multicast partial failure: {}", r.getException().getMessage());
+                    }
+                });
+            }
+        } catch (FirebaseMessagingException e) {
+            log.error("FCM multicast with data error: {}", e.getMessage(), e);
+        }
+    }
+
+    /** Phiên bản async của sendToMultipleTokensWithData. */
+    @Async("fcmTaskExecutor")
+    public void sendToMultipleTokensWithDataAsync(List<String> tokens, String title, String body,
+            java.util.Map<String, String> data) {
+        sendToMultipleTokensWithData(tokens, title, body, data);
+    }
+
+    /**
      * Gửi thông báo đến một topic cụ thể.
      */
     public void sendToTopic(String topic, String title, String body, java.util.Map<String, String> data) {
