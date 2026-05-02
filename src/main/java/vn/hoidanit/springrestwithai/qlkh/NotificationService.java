@@ -18,6 +18,8 @@ import vn.hoidanit.springrestwithai.feature.notification.entity.SystemNotificati
 import vn.hoidanit.springrestwithai.feature.notification.SystemNotificationRepository;
 import vn.hoidanit.springrestwithai.feature.notification.SystemNotificationReadRepository;
 import vn.hoidanit.springrestwithai.feature.article.ArticleRepository;
+import vn.hoidanit.springrestwithai.feature.feedback.entity.Feedback;
+import vn.hoidanit.springrestwithai.feature.feedback.entity.FeedbackStatus;
 import vn.hoidanit.springrestwithai.qlkh.dto.NotificationResponse;
 
 import java.util.ArrayList;
@@ -105,7 +107,7 @@ public class NotificationService {
     public void sendNewInvoiceNotification(Integer customerId) {
         String title = "Hóa đơn mới";
         String content = "Bạn có hóa đơn tháng mới. Vui lòng kiểm tra chi tiết trong ứng dụng.";
-        saveAndPush(customerId, title, content, "INVOICE");
+        saveAndPush(customerId, title, content, "INVOICE", null);
     }
 
     /**
@@ -115,7 +117,35 @@ public class NotificationService {
     public void sendPaymentSuccessNotification(Integer customerId) {
         String title = "Thanh toán thành công";
         String content = "Bạn đã thanh toán hóa đơn thành công. Cảm ơn bạn!";
-        saveAndPush(customerId, title, content, "PAYMENT");
+        saveAndPush(customerId, title, content, "PAYMENT", null);
+    }
+
+    /**
+     * Gọi khi Admin đổi trạng thái phản ánh — thông báo đến KH ngay lập tức.
+     */
+    @Transactional("primaryTransactionManager")
+    public void notifyFeedbackStatusChanged(Feedback feedback, FeedbackStatus newStatus) {
+        String statusLabel = statusLabel(newStatus);
+        String title = "Phản ánh của bạn đã được cập nhật";
+        String content = feedback.getTrackingCode() + ": " + statusLabel;
+        saveAndPush(feedback.getCustomerId(), title, content, "FEEDBACK", feedback.getId());
+        log.info("Sent FEEDBACK status notification to customerId={} trackingCode={} newStatus={}",
+                feedback.getCustomerId(), feedback.getTrackingCode(), newStatus);
+    }
+
+    /**
+     * Gọi khi Admin gửi reply — thông báo đến KH có phản hồi mới.
+     */
+    @Transactional("primaryTransactionManager")
+    public void notifyFeedbackReply(Feedback feedback, String replyContent) {
+        String title = "Bạn có phản hồi mới từ nhân viên";
+        String preview = replyContent != null && replyContent.length() > 80
+                ? replyContent.substring(0, 80) + "..."
+                : replyContent;
+        String content = feedback.getTrackingCode() + ": " + preview;
+        saveAndPush(feedback.getCustomerId(), title, content, "FEEDBACK", feedback.getId());
+        log.info("Sent FEEDBACK reply notification to customerId={} trackingCode={}",
+                feedback.getCustomerId(), feedback.getTrackingCode());
     }
 
     // ─── Notification CRUD ──────────────────────────────────────────────────
@@ -230,7 +260,8 @@ public class NotificationService {
         String title = "Hóa đơn mới tháng " + formatYearMonth(yearMonth);
         String content = "Hóa đơn tiền nước tháng " + formatYearMonth(yearMonth)
                 + " của bạn đã có. Vui lòng kiểm tra và thanh toán đúng hạn.";
-        saveAndPush(customerId, title, content, "INVOICE");
+        saveAndPush(customerId, title, content, "INVOICE", null);
+
 
         // Đánh dấu đã gửi
         NotifiedInvoice mark = new NotifiedInvoice();
@@ -262,7 +293,7 @@ public class NotificationService {
         String title = "Thanh toán thành công";
         String content = "Hóa đơn tiền nước tháng " + formatYearMonth(yearMonth)
                 + " đã được thanh toán thành công. Cảm ơn bạn!";
-        saveAndPush(customerId, title, content, "PAYMENT");
+        saveAndPush(customerId, title, content, "PAYMENT", null);
 
         // Đánh dấu đã gửi
         NotifiedPayment mark = new NotifiedPayment();
@@ -282,7 +313,7 @@ public class NotificationService {
         return ym.substring(4) + "/" + ym.substring(0, 4);
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
+    // ─── Helpers ──────────────────────────────────────────────────────────────────────
 
     private String buildUrl(Long referenceId) {
         if (referenceId == null) return null;
@@ -291,13 +322,17 @@ public class NotificationService {
                 .orElse(null);
     }
 
-    private void saveAndPush(Integer customerId, String title, String content, String type) {
+    /** Overload không có referenceId — dùng cho INVOICE / PAYMENT. */
+    private void saveAndPush(Integer customerId, String title, String content, String type, Long referenceId) {
         // 1. Lưu vào DB
         Notification notification = new Notification();
         notification.setCustomerId(customerId);
         notification.setTitle(title);
         notification.setContent(content);
         notification.setType(type);
+        if (referenceId != null) {
+            notification.setReferenceId(referenceId);
+        }
         notificationRepository.save(notification);
 
         // 2. Gửi FCM đến tất cả devices
@@ -310,14 +345,32 @@ public class NotificationService {
             log.debug("No devices registered for customerId={}. Notification saved but no push sent.", customerId);
             return;
         }
-        
-        try {
-            firebaseService.sendToMultipleTokensAsync(tokens, title, content);
-        } catch (Exception e) {
-            log.error("Failed to send FCM push to customerId={} (tokens: {}): {}", 
-                    customerId, tokens.size(), e.getMessage());
-            // KHÔNG throw lỗi ra ngoài để Transaction vẫn được commit,
-            // đảm bảo cờ "đã gửi" được lưu, tránh kẹt cron job.
+
+        // 3. Thêm data payload để Mobile deep link (chỉ khi có referenceId)
+        Map<String, String> data = null;
+        if (referenceId != null) {
+            data = Map.of("type", type, "referenceId", referenceId.toString());
         }
+
+        try {
+            if (data != null) {
+                firebaseService.sendToMultipleTokensWithDataAsync(tokens, title, content, data);
+            } else {
+                firebaseService.sendToMultipleTokensAsync(tokens, title, content);
+            }
+        } catch (Exception e) {
+            log.error("Failed to send FCM push to customerId={} (tokens: {}): {}",
+                    customerId, tokens.size(), e.getMessage());
+            // KHÔNG throw lỗi ra ngoài để Transaction vẫn được commit
+        }
+    }
+
+    private static String statusLabel(FeedbackStatus status) {
+        return switch (status) {
+            case PENDING    -> "Đang chờ xử lý";
+            case PROCESSING -> "Đang xử lý";
+            case RESOLVED   -> "Đã xử lý xong";
+            case REJECTED   -> "Không tiếp nhận";
+        };
     }
 }
