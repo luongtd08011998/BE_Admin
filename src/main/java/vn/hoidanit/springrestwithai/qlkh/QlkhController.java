@@ -31,16 +31,21 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 import vn.hoidanit.springrestwithai.dto.ApiResponse;
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
+import vn.hoidanit.springrestwithai.exception.InvalidTokenException;
 import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
 import vn.hoidanit.springrestwithai.feature.article.ArticleService;
+import vn.hoidanit.springrestwithai.feature.auth.CustomerRefreshToken;
+import vn.hoidanit.springrestwithai.feature.auth.CustomerRefreshTokenRepository;
 import vn.hoidanit.springrestwithai.qlkh.dto.CustomerLoginRequest;
 import vn.hoidanit.springrestwithai.qlkh.dto.CustomerLoginResponse;
 import vn.hoidanit.springrestwithai.qlkh.dto.InvoiceResponse;
 import vn.hoidanit.springrestwithai.qlkh.dto.MonthInvoiceReadingItemResponse;
+import vn.hoidanit.springrestwithai.qlkh.dto.RefreshTokenRequest;
 import vn.hoidanit.springrestwithai.qlkh.dto.SalesInvoiceResponse;
 import vn.hoidanit.springrestwithai.qlkh.dto.TokenResponse;
 import vn.hoidanit.springrestwithai.qlkh.entity.Customer;
@@ -60,9 +65,13 @@ public class QlkhController {
     private final JwtEncoder jwtEncoder;
     private final JwtDecoder jwtDecoder;
     private final ArticleService articleService;
+    private final CustomerRefreshTokenRepository refreshTokenRepository;
 
     @Value("${jwt.access-token-expiration}")
     private long accessTokenExpiration;
+
+    @Value("${jwt.qlkh-refresh-token-expiration}")
+    private long qlkhRefreshTokenExpiration;
 
     private static final Pattern YEAR_MONTH_PATTERN = Pattern.compile("^\\d{6}$");
 
@@ -72,7 +81,8 @@ public class QlkhController {
             VnptPortalInvoiceClient vnptPortalInvoiceClient,
             JwtEncoder jwtEncoder,
             JwtDecoder jwtDecoder,
-            ArticleService articleService) {
+            ArticleService articleService,
+            CustomerRefreshTokenRepository refreshTokenRepository) {
         this.customerRepository = customerRepository;
         this.monthInvoiceRepository = monthInvoiceRepository;
         this.salesInvoiceRepository = salesInvoiceRepository;
@@ -80,10 +90,11 @@ public class QlkhController {
         this.jwtEncoder = jwtEncoder;
         this.jwtDecoder = jwtDecoder;
         this.articleService = articleService;
+        this.refreshTokenRepository = refreshTokenRepository;
     }
 
     /**
-     * Bước 1: Đăng nhập bằng mã KH (DigiCode) + SĐT — nhận JWT để gọi các API sau.
+     * Bước 1: Đăng nhập bằng mã KH (DigiCode) + SĐT — nhận JWT (Access Token) và Refresh Token.
      */
     @PostMapping("/auth/login")
     public ResponseEntity<ApiResponse<TokenResponse>> login(
@@ -92,8 +103,46 @@ public class QlkhController {
                 .findByDigiCodeAndPhone(request.digiCode(), request.phone())
                 .orElseThrow(() -> new ResourceNotFoundException("Khách hàng", "mã KH/SĐT",
                         request.digiCode()));
-        String token = generateToken(customer);
-        return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công", new TokenResponse(token)));
+        String accessToken = generateToken(customer);
+        String refreshToken = createAndSaveRefreshToken(customer);
+        return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công",
+                new TokenResponse(accessToken, refreshToken)));
+    }
+
+    /**
+     * Dùng Refresh Token (hạn 30 ngày) để lấy Access Token mới — không cần đăng nhập lại.
+     * Body: { "refreshToken": "<uuid>" }
+     */
+    @PostMapping("/auth/refresh")
+    public ResponseEntity<ApiResponse<TokenResponse>> refresh(
+            @RequestBody RefreshTokenRequest request) {
+        if (request.refreshToken() == null || request.refreshToken().isBlank()) {
+            throw new InvalidTokenException("refreshToken không được để trống");
+        }
+        CustomerRefreshToken stored = refreshTokenRepository
+                .findByToken(request.refreshToken())
+                .orElseThrow(() -> new InvalidTokenException("Refresh Token không hợp lệ"));
+        if (stored.getExpiresAt().isBefore(Instant.now())) {
+            refreshTokenRepository.delete(stored);
+            throw new InvalidTokenException("Refresh Token đã hết hạn, vui lòng đăng nhập lại");
+        }
+        Customer customer = customerRepository.findByDigiCode(stored.getDigiCode())
+                .orElseThrow(() -> new ResourceNotFoundException("Khách hàng", "digiCode", stored.getDigiCode()));
+        String newAccessToken = generateToken(customer);
+        return ResponseEntity.ok(ApiResponse.success("Làm mới token thành công",
+                new TokenResponse(newAccessToken, request.refreshToken())));
+    }
+
+    /**
+     * Đăng xuất: xóa tất cả Refresh Token của khách hàng (trên mọi thiết bị).
+     * Yêu cầu Access Token còn hợp lệ trong header Authorization.
+     */
+    @PostMapping("/auth/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(
+            @RequestHeader("Authorization") String authHeader) {
+        Customer customer = getCustomerFromToken(authHeader);
+        refreshTokenRepository.deleteByCustomerId(customer.getCustomerId());
+        return ResponseEntity.ok(ApiResponse.success("Đăng xuất thành công", null));
     }
 
     /**
@@ -344,6 +393,19 @@ public class QlkhController {
                 .build();
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
         return jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
+    }
+
+    private String createAndSaveRefreshToken(Customer customer) {
+        String token = UUID.randomUUID().toString();
+        Instant now = Instant.now();
+        CustomerRefreshToken entity = new CustomerRefreshToken(
+                token,
+                customer.getCustomerId(),
+                customer.getDigiCode(),
+                now.plusMillis(qlkhRefreshTokenExpiration),
+                now);
+        refreshTokenRepository.save(entity);
+        return token;
     }
 
     private Customer getCustomerFromToken(String authHeader) {

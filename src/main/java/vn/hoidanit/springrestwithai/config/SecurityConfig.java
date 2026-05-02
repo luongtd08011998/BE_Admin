@@ -53,6 +53,8 @@ public class SecurityConfig {
             "/api/v1/dashboard",
             "/uploads/**",
             "/api/v1/qlkh/auth/login",
+            "/api/v1/qlkh/auth/refresh",
+            "/api/v1/qlkh/auth/logout",
             "/api/v1/qlkh/month-invoices/**",
             "/api/v1/qlkh/customer/auth/login",
             "/api/v1/qlkh/customer/articles/**",
@@ -92,6 +94,8 @@ public class SecurityConfig {
         http
                 .securityMatcher(
                         "/api/v1/qlkh/auth/login",
+                        "/api/v1/qlkh/auth/refresh",
+                        "/api/v1/qlkh/auth/logout",
                         "/api/v1/qlkh/month-invoices/**",
                         "/api/v1/qlkh/customer/auth/login",
                         "/api/v1/qlkh/customer/articles/**"

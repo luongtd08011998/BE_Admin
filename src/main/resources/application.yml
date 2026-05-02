@@ -48,6 +48,8 @@ jwt:
   secret: hoidanitjwtsecretkeyHS256hoidanitjwtsecretkeyHS256hoidanitjwt
   access-token-expiration: 35000000
   refresh-expiration: 604800000
+  # Refresh Token cho QLKH Mobile — 30 ngày
+  qlkh-refresh-token-expiration: 5550400000
 
 app:
   base-url: http://beta.toctienltd.vn/news
