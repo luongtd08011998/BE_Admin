@@ -12,16 +12,16 @@ spring:
       password: Kawasaki1
       driver-class-name: com.mysql.cj.jdbc.Driver
     # DB thứ 2 (QLKH legacy — customer / monthinvoice / payment). Xem docs/decisions/databaseqlkh.md
-    # qlkh:
-    #   jdbc-url: jdbc:mysql://103.15.51.97:3306/cm_20211018?allowPublicKeyRetrieval=true&useSSL=false&characterEncoding=UTF-8
-    #   username: luongtd
-    #   password: 1234
-    #   driver-class-name: com.mysql.cj.jdbc.Driver
     qlkh:
-      jdbc-url: jdbc:mysql://localhost:3306/cm_20211018?allowPublicKeyRetrieval=true&useSSL=false&characterEncoding=UTF-8
-      username: root
+      jdbc-url: jdbc:mysql://103.15.51.97:3306/cm_20211018?allowPublicKeyRetrieval=true&useSSL=false&characterEncoding=UTF-8
+      username: luongtd
       password: 1234
       driver-class-name: com.mysql.cj.jdbc.Driver
+    # qlkh:
+    #   jdbc-url: jdbc:mysql://localhost:3306/cm_20211018?allowPublicKeyRetrieval=true&useSSL=false&characterEncoding=UTF-8
+    #   username: root
+    #   password: 1234
+    #   driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
       ddl-auto: update
@@ -50,7 +50,7 @@ jwt:
   refresh-expiration: 604800000
 
 app:
-  base-url: http://localhost:3000/news
+  base-url: http://beta.toctienltd.vn/news
   upload:
     base-dir: ./uploads
     max-file-size: 5242880
