@@ -51,3 +51,8 @@ build/
 
 ### Test scripts ###
 test_*.sh
+
+### Logs ###
+logs/**
+!logs/.gitkeep
+*.log
