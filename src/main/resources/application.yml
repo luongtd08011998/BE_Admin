@@ -52,7 +52,7 @@ jwt:
   qlkh-refresh-token-expiration: 5550400000
 
 app:
-  base-url: http://beta.toctienltd.vn/news
+  base-url: https://beta.toctienltd.vn/news
   upload:
     base-dir: ./uploads
     max-file-size: 5242880
