@@ -26,25 +26,31 @@ public interface ArticleRepository extends JpaRepository<Article, Long>, JpaSpec
                 @Query(value = """
                                                         SELECT DISTINCT a.*
                                                         FROM articles a
-                                                        WHERE :keyword IS NULL
+                                                        WHERE a.active = 1 AND (
+                                                               :keyword IS NULL
                                                                OR TRIM(:keyword) = ''
                                                                OR a.title COLLATE utf8mb4_0900_ai_ci LIKE CONCAT('%', TRIM(:keyword), '%')
                                                                OR a.slug COLLATE utf8mb4_0900_ai_ci LIKE CONCAT('%', TRIM(:keyword), '%')
                                                                OR a.content COLLATE utf8mb4_0900_ai_ci LIKE CONCAT('%', TRIM(:keyword), '%')
+                                                        )
                                                         """, countQuery = """
                                                         SELECT COUNT(DISTINCT a.id)
                                                         FROM articles a
-                                                        WHERE :keyword IS NULL
+                                                        WHERE a.active = 1 AND (
+                                                               :keyword IS NULL
                                                                OR TRIM(:keyword) = ''
                                                                OR a.title COLLATE utf8mb4_0900_ai_ci LIKE CONCAT('%', TRIM(:keyword), '%')
                                                                OR a.slug COLLATE utf8mb4_0900_ai_ci LIKE CONCAT('%', TRIM(:keyword), '%')
                                                                OR a.content COLLATE utf8mb4_0900_ai_ci LIKE CONCAT('%', TRIM(:keyword), '%')
+                                                        )
                                                         """, nativeQuery = true)
                 Page<Article> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 
+        @Query("SELECT a FROM Article a WHERE a.active = 1 AND a.category.id IN :categoryIds")
         Page<Article> findByCategoryIdIn(List<Long> categoryIds, Pageable pageable);
 
-                Page<Article> findDistinctByTagArticlesTagId(Long tagId, Pageable pageable);
+        @Query("SELECT DISTINCT a FROM Article a JOIN a.tagArticles ta WHERE a.active = 1 AND ta.tag.id = :tagId")
+        Page<Article> findDistinctByTagArticlesTagId(Long tagId, Pageable pageable);
 
         @Query("SELECT DISTINCT a FROM Article a LEFT JOIN a.tagArticles ta " +
                "WHERE a.id != :id AND a.active = 1 " +
