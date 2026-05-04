@@ -157,7 +157,7 @@ public class CategoryServiceImpl implements CategoryService {
         Map<Long, CategoryTreeResponseDTO> dtoMap = all.stream()
                 .map(c -> new CategoryTreeResponseDTO(
                         c.getId(), c.getName(), c.getSlug(),
-                        c.getCreatedAt(), c.getUpdatedAt()))
+                        c.getCreatedAt(), c.getUpdatedAt(), c.getActive()))
                 .collect(Collectors.toMap(CategoryTreeResponseDTO::getId, Function.identity()));
 
         List<CategoryTreeResponseDTO> roots = new ArrayList<>();
@@ -186,7 +186,8 @@ public class CategoryServiceImpl implements CategoryService {
                 category.getName(),
                 category.getSlug(),
                 category.getCreatedAt(),
-                category.getUpdatedAt()
+                category.getUpdatedAt(),
+                category.getActive()
         );
 
         if (category.getParent() != null) {
@@ -196,7 +197,8 @@ public class CategoryServiceImpl implements CategoryService {
                     parent.getName(),
                     parent.getSlug(),
                     parent.getCreatedAt(),
-                    parent.getUpdatedAt()
+                    parent.getUpdatedAt(),
+                    parent.getActive()
             ));
         }
 

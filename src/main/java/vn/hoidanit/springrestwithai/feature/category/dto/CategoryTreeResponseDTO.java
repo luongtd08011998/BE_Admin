@@ -12,23 +12,25 @@ public class CategoryTreeResponseDTO {
     private Instant updatedAt;
 
     private List<CategoryTreeResponseDTO> children = new ArrayList<>();
+    private CategoryTreeResponseDTO parent;
+    private Byte active; // 👈 Add active field
 
-    private CategoryTreeResponseDTO parent; // 👈 Duy nhất 1 cha
-
-    public CategoryTreeResponseDTO(Long id, String name, String slug, Instant createAt, Instant updateAt) {
+    public CategoryTreeResponseDTO(Long id, String name, String slug, Instant createAt, Instant updateAt, Byte active) {
         this.id = id;
         this.name = name;
         this.slug = slug;
-        this.createdAt =  createAt;
+        this.createdAt = createAt;
         this.updatedAt = updateAt;
+        this.active = active;
     }
 
-    public CategoryTreeResponseDTO(Long id, String name, String slug, Instant createdAt, Instant updatedAt, List<CategoryTreeResponseDTO> children, CategoryTreeResponseDTO parent) {
+    public CategoryTreeResponseDTO(Long id, String name, String slug, Instant createdAt, Instant updatedAt, Byte active, List<CategoryTreeResponseDTO> children, CategoryTreeResponseDTO parent) {
         this.id = id;
         this.name = name;
         this.slug = slug;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.active = active;
         this.children = children;
         this.parent = parent;
     }
@@ -53,4 +55,7 @@ public class CategoryTreeResponseDTO {
 
     public CategoryTreeResponseDTO getParent() { return parent; }
     public void setParent(CategoryTreeResponseDTO parent) { this.parent = parent; }
+
+    public Byte getActive() { return active; }
+    public void setActive(Byte active) { this.active = active; }
 }

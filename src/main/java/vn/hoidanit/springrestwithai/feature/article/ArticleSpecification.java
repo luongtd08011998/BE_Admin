@@ -35,6 +35,10 @@ public class ArticleSpecification {
                 predicates.add(cb.equal(from.get("type"), filter.type()));
             }
 
+            if (filter.active() != null) {
+                predicates.add(cb.equal(from.get("active"), filter.active()));
+            }
+
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
