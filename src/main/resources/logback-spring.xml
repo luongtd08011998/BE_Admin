@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+    <property name="LOG_DIR" value="logs/activity" />
+
+    <!-- Daily Rolling File Appender for Activity Logs -->
+    <appender name="ACTIVITY_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/activity.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- Daily rollover: activity-2026-05-03.log -->
+            <fileNamePattern>${LOG_DIR}/activity-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- Keep 90 days worth of history -->
+            <maxHistory>90</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Dedicated Logger for Business Activity -->
+    <logger name="BUSINESS_ACTIVITY" level="INFO" additivity="false">
+        <appender-ref ref="ACTIVITY_FILE" />
+    </logger>
+
+    <!-- Standard Application Logs -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+    </root>
+</configuration>

@@ -10,8 +10,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import vn.hoidanit.springrestwithai.feature.log.SystemLogService;
+
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Wrapper gửi Push Notification qua Firebase Cloud Messaging (FCM).
@@ -25,6 +28,11 @@ import java.util.List;
 public class FirebaseService {
 
     private static final Logger log = LoggerFactory.getLogger(FirebaseService.class);
+    private final SystemLogService systemLogService;
+
+    public FirebaseService(SystemLogService systemLogService) {
+        this.systemLogService = systemLogService;
+    }
 
     /**
      * Gửi thông báo đến một device token cụ thể.
@@ -40,9 +48,13 @@ public class FirebaseService {
                     .build();
             String response = FirebaseMessaging.getInstance().send(message);
             log.info("FCM sent to token={}: messageId={}", maskToken(deviceToken), response);
+            systemLogService.logNotification(deviceToken, "SEND_FCM_TOKEN", "SUCCESS",
+                    String.format("Sent to token: %s", title), response);
         } catch (FirebaseMessagingException e) {
             log.error("FCM error for token={}: code={} message={}", maskToken(deviceToken),
                     e.getMessagingErrorCode(), e.getMessage());
+            systemLogService.logNotification(deviceToken, "SEND_FCM_TOKEN", "FAILURE",
+                    String.format("Error: %s", e.getMessage()), e.getMessagingErrorCode().toString());
         }
     }
 
@@ -65,6 +77,12 @@ public class FirebaseService {
             var result = FirebaseMessaging.getInstance().sendEachForMulticast(message);
             log.info("FCM multicast: successCount={} failureCount={}",
                     result.getSuccessCount(), result.getFailureCount());
+
+            String status = result.getFailureCount() == 0 ? "SUCCESS" : "PARTIAL_SUCCESS";
+            String description = String.format("Title: %s, Success: %d, Failure: %d",
+                    title, result.getSuccessCount(), result.getFailureCount());
+            systemLogService.logNotification("BATCH", "SEND_FCM_MULTICAST", status, description, null);
+
             if (result.getFailureCount() > 0) {
                 result.getResponses().forEach(r -> {
                     if (!r.isSuccessful()) {
@@ -74,6 +92,8 @@ public class FirebaseService {
             }
         } catch (FirebaseMessagingException e) {
             log.error("FCM multicast error: {}", e.getMessage(), e);
+            systemLogService.logNotification("BATCH", "SEND_FCM_MULTICAST", "FAILURE",
+                    String.format("Error: %s", e.getMessage()), null);
         }
     }
 
@@ -108,6 +128,12 @@ public class FirebaseService {
             var result = FirebaseMessaging.getInstance().sendEachForMulticast(builder.build());
             log.info("FCM multicast with data: successCount={} failureCount={}",
                     result.getSuccessCount(), result.getFailureCount());
+
+            String status = result.getFailureCount() == 0 ? "SUCCESS" : "PARTIAL_SUCCESS";
+            String description = String.format("Title: %s (with data), Success: %d, Failure: %d",
+                    title, result.getSuccessCount(), result.getFailureCount());
+            systemLogService.logNotification("BATCH", "SEND_FCM_MULTICAST_DATA", status, description, null);
+
             if (result.getFailureCount() > 0) {
                 result.getResponses().forEach(r -> {
                     if (!r.isSuccessful()) {
@@ -117,6 +143,8 @@ public class FirebaseService {
             }
         } catch (FirebaseMessagingException e) {
             log.error("FCM multicast with data error: {}", e.getMessage(), e);
+            systemLogService.logNotification("BATCH", "SEND_FCM_MULTICAST_DATA", "FAILURE",
+                    String.format("Error: %s", e.getMessage()), null);
         }
     }
 
@@ -145,9 +173,13 @@ public class FirebaseService {
 
             String response = FirebaseMessaging.getInstance().send(messageBuilder.build());
             log.info("FCM sent to topic={}: messageId={}", topic, response);
+            systemLogService.logNotification("TOPIC:" + topic, "SEND_FCM_TOPIC", "SUCCESS",
+                    String.format("Title: %s", title), response);
         } catch (FirebaseMessagingException e) {
             log.error("FCM error for topic={}: code={} message={}", topic,
                     e.getMessagingErrorCode(), e.getMessage());
+            systemLogService.logNotification("TOPIC:" + topic, "SEND_FCM_TOPIC", "FAILURE",
+                    String.format("Error: %s", e.getMessage()), e.getMessagingErrorCode().toString());
         }
     }
 
