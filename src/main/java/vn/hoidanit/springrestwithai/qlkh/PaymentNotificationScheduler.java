@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class PaymentNotificationScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentNotificationScheduler.class);
+    private static final Logger businessLogger = LoggerFactory.getLogger("BUSINESS_ACTIVITY");
 
     private final MonthInvoiceRepository monthInvoiceRepository;
     private final NotificationService notificationService;
@@ -101,8 +102,9 @@ public class PaymentNotificationScheduler {
         }
 
         if (sentCount.get() > 0) {
-            log.info("[PaymentNotify] Hoàn tất: đã gửi thông báo thanh toán mới={}",
-                    sentCount.get());
+            String msg = String.format("[PaymentNotify] Hoàn tất: đã gửi thông báo thanh toán mới=%d", sentCount.get());
+            log.info(msg);
+            businessLogger.info("TYPE: NOTIFICATION_SUMMARY | ACTION: PAYMENT_NOTIFY | STATUS: SUCCESS | MSG: {}", msg);
         }
     }
 }

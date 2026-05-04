@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class InvoiceNotificationScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(InvoiceNotificationScheduler.class);
+    private static final Logger businessLogger = LoggerFactory.getLogger("BUSINESS_ACTIVITY");
 
     private final MonthInvoiceRepository monthInvoiceRepository;
     private final NotificationService notificationService;
@@ -114,8 +115,10 @@ public class InvoiceNotificationScheduler {
         }
 
         if (sentCount.get() > 0) {
-            log.info("[InvoiceNotify] Hoàn tất quét '{}': đã gửi mới={}, bỏ qua={}",
+            String msg = String.format("[InvoiceNotify] Hoàn tất quét '%s': đã gửi mới=%d, bỏ qua=%d",
                     queryDate, sentCount.get(), skipCount.get());
+            log.info(msg);
+            businessLogger.info("TYPE: NOTIFICATION_SUMMARY | ACTION: INVOICE_NOTIFY | STATUS: SUCCESS | MSG: {}", msg);
         }
     }
 }
