@@ -118,6 +118,11 @@
 			<artifactId>spring-boot-starter-mail</artifactId>
 		</dependency>
 
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-aspects</artifactId>
+		</dependency>
+
 		<!-- Nạp file .env ở thư mục dự án (IDE không tự set VNPT_PORTAL_*). -->
 		<dependency>
 			<groupId>io.github.cdimascio</groupId>

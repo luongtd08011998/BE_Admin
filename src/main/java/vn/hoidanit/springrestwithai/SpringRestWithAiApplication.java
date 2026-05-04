@@ -16,7 +16,6 @@ import vn.hoidanit.springrestwithai.qlkh.vnpt.VnptPortalProperties;
 
 @SpringBootApplication
 @EnableScheduling
-@EnableAsync
 @EnableConfigurationProperties(VnptPortalProperties.class)
 public class SpringRestWithAiApplication {
 
