@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration>
+<configuration debug="true">
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
 
-    <property name="LOG_DIR" value="logs/activity" />
+    <property name="LOG_DIR" value="${user.dir}/logs/activity" />
 
     <!-- Daily Rolling File Appender for Activity Logs -->
     <appender name="ACTIVITY_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
