@@ -93,7 +93,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     }
 
     // ═══════════════════════════════════════
-    // Step 1: Permissions (31 records)
+    // Step 1: Permissions (35 records)
     // ═══════════════════════════════════════
 
     private List<Permission> seedPermissions() {
@@ -163,7 +163,13 @@ public class DatabaseSeeder implements CommandLineRunner {
                 createPermission("VIEW_FEEDBACK", "/api/v1/admin/feedbacks/{id}", "GET", "FEEDBACK"),
                 createPermission("UPDATE_FEEDBACK_STATUS", "/api/v1/admin/feedbacks/{id}/status", "PUT", "FEEDBACK"),
                 createPermission("CREATE_FEEDBACK_REPLY", "/api/v1/admin/feedbacks/{id}/replies", "POST", "FEEDBACK"),
-                createPermission("VIEW_FEEDBACK_REPLIES", "/api/v1/admin/feedbacks/{id}/replies", "GET", "FEEDBACK"));
+                createPermission("VIEW_FEEDBACK_REPLIES", "/api/v1/admin/feedbacks/{id}/replies", "GET", "FEEDBACK"),
+
+                // MEDIA module
+                createPermission("UPLOAD_MEDIA", "/api/v1/media", "POST", "MEDIA"),
+                createPermission("VIEW_MEDIA", "/api/v1/media", "GET", "MEDIA"),
+                createPermission("VIEW_MEDIA_ITEM", "/api/v1/media/{id}", "GET", "MEDIA"),
+                createPermission("DELETE_MEDIA", "/api/v1/media/{id}", "DELETE", "MEDIA"));
 
         List<Permission> saved = permissionRepository.saveAll(permissions);
         log.info("Seeded {} permissions", saved.size());
@@ -209,14 +215,15 @@ public class DatabaseSeeder implements CommandLineRunner {
         // SUPER_ADMIN — all permissions
         Role superAdmin = createRole("SUPER_ADMIN", "Full system access", allPermissions);
 
-        // HR — user management + view company + upload file + document management
+        // HR — user management + view company + upload file + document management + media management
         Role hr = createRole("HR", "Human resources management",
                 filterPermissions(allPermissions,
                         "CREATE_USER", "UPDATE_USER", "VIEW_USERS", "VIEW_USER",
                         "VIEW_COMPANIES", "VIEW_COMPANY",
                         "VIEW_CATEGORIES", "VIEW_CATEGORY",
                         "CREATE_DOCUMENT", "UPDATE_DOCUMENT", "DELETE_DOCUMENT", "VIEW_DOCUMENTS", "VIEW_DOCUMENT",
-                        "UPLOAD_FILE"));
+                        "UPLOAD_FILE",
+                        "UPLOAD_MEDIA", "VIEW_MEDIA", "VIEW_MEDIA_ITEM", "DELETE_MEDIA"));
 
         // MANAGER — view only
         Role manager = createRole("MANAGER", "Department manager",
@@ -225,7 +232,8 @@ public class DatabaseSeeder implements CommandLineRunner {
                         "VIEW_COMPANIES", "VIEW_COMPANY",
                         "VIEW_ROLES", "VIEW_ROLE",
                         "VIEW_CATEGORIES", "VIEW_CATEGORY",
-                        "VIEW_DOCUMENTS", "VIEW_DOCUMENT"));
+                        "VIEW_DOCUMENTS", "VIEW_DOCUMENT",
+                        "VIEW_MEDIA", "VIEW_MEDIA_ITEM"));
 
         // USER — basic access
         Role user = createRole("USER", "Regular employee",
@@ -235,7 +243,8 @@ public class DatabaseSeeder implements CommandLineRunner {
                         "VIEW_CATEGORIES", "VIEW_CATEGORY",
                         "VIEW_DOCUMENTS", "VIEW_DOCUMENT",
                         "VIEW_TAGS", "VIEW_TAG",
-                        "UPLOAD_FILE"));
+                        "UPLOAD_FILE",
+                        "UPLOAD_MEDIA", "VIEW_MEDIA", "VIEW_MEDIA_ITEM"));
 
         List<Role> saved = roleRepository.saveAll(List.of(superAdmin, hr, manager, user));
         log.info("Seeded {} roles", saved.size());

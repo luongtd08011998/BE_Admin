@@ -117,6 +117,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/articles/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/tags/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/media/**").permitAll()
+
                         .requestMatchers(new RegexRequestMatcher("^/api/v1/articles/slug/[^/]+/view$", "POST"))
                                 .permitAll()
                         .requestMatchers("/api/v1/qlkh/customers/me").authenticated()

@@ -1278,4 +1278,8 @@ Upload a single file to the server. The returned `fileName` is then used to upda
 | PUT    | /permissions      | 🔒   | Update permission           |
 | DELETE | /permissions/{id} | 🔒   | Delete permission           |
 | POST   | /files            | 🔒   | Upload file (avatar / logo) |
+| POST   | /media            | 🔒   | Upload media (image / document) |
+| GET    | /media            | ✅   | List media (paginated, filterable) |
+| GET    | /media/{id}       | ✅   | Get media by ID              |
+| DELETE | /media/{id}       | 🔒   | Delete media                 |
 | GET    | /dashboard        | 🔒   | Dashboard summary counts    |
