@@ -49,6 +49,24 @@
                                                   └─────────────────┘
 ```
 
+### Media Schema
+
+```
+┌────────────────┐
+│     media      │
+├────────────────┤
+│ id (PK)        │
+│ title          │
+│ file_name      │
+│ file_url       │
+│ file_type      │
+│ file_size      │
+│ uploaded_by    │──→ users(id)
+│ created_at     │
+│ updated_at     │
+└────────────────┘
+```
+
 ### News Schema
 
 ```
@@ -247,6 +265,24 @@ Indexes:
 Indexes:
 - `INDEX idx_documents_article ON documents(article_id)`
 
+### media
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | BIGINT | PK, AUTO_INCREMENT | |
+| title | VARCHAR(255) | NULLABLE | Tiêu đề (mặc định = tên file gốc) |
+| file_name | VARCHAR(255) | NOT NULL | Tên file gốc |
+| file_url | VARCHAR(500) | NOT NULL | URL file (/uploads/media/...) |
+| file_type | VARCHAR(20) | NOT NULL | Định dạng: jpg, png, pdf, docx... |
+| file_size | BIGINT | NOT NULL | Kích thước (bytes) |
+| uploaded_by | BIGINT | NOT NULL | User ID upload |
+| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | |
+| updated_at | TIMESTAMP | NULLABLE, ON UPDATE CURRENT_TIMESTAMP | |
+
+Indexes:
+- `INDEX idx_media_file_type ON media(file_type)`
+- `INDEX idx_media_uploaded_by ON media(uploaded_by)`
+
 ### tags
 
 | Column | Type | Constraints | Description |
@@ -295,6 +331,7 @@ Indexes:
 | Article → User | ManyToOne | Article | `@JoinColumn(name = "author_id")` |
 | Article → Document | OneToMany | Document | `@JoinColumn(name = "article_id")` |
 | Article ↔ Tag | ManyToMany via tag_articles | TagArticle | `@JoinColumn(name = "article_id")` |
+| Media → User | ManyToOne (logic) | — | `uploaded_by` references users(id) |
 
 ### JPA Mapping Notes
 - All `@ManyToOne`: use `FetchType.LAZY`
@@ -514,7 +551,7 @@ private Tag tag;
 
 ## Migration Notes
 
-- **Total tables: 12** — users, companies, roles, permissions, user_role, permission_role, refresh_tokens, categories, articles, documents, tags, tag_articles
+- **Total tables: 13** — users, companies, roles, permissions, user_role, permission_role, refresh_tokens, categories, articles, documents, tags, tag_articles, media
 - Schema managed by Hibernate `ddl-auto`:
   - `dev` profile: `update` (auto-create/alter tables)
   - `prod` profile: `validate` (manual migration only)

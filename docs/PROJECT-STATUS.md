@@ -1,6 +1,6 @@
 # Project Status
 
-> Last updated: 2026-04-14 | By: @hoidanit | Session: #4
+> Last updated: 2026-05-05 | By: @hoidanit | Session: #5
 >
 > AI: update this file at the end of every session when asked.
 > Follow this exact format. Keep it concise — under 80 lines.
@@ -51,6 +51,8 @@
 - ✅ **[2026-04-14]** Dotenv loading — `DotenvEnvironmentPostProcessor` đăng ký đúng SPI (`META-INF/spring/org.springframework.boot.EnvironmentPostProcessor.imports`); load `.env` trong `main()` trước Spring khởi động (hỗ trợ `-Denv.file=`)
 - ✅ **[2026-04-14]** CORS — thêm origin `https://125.253.121.171` vào `SecurityConfig` cho môi trường production HTTPS
 - ✅ **[2026-04-14]** Deploy Windows Server — JAR chạy bằng `start.bat` với JVM args `-DVNPT_PORTAL_*`; Nginx reverse proxy với self-signed SSL (port 443); HTTP → HTTPS redirect
+
+- ✅ **[2026-05-05]** Media Library — entity, repository, specification, service, controller (upload/list/filter/delete); 4 permissions MEDIA seeded; GET public, POST/DELETE cần permission; hỗ trợ jpg/png/gif/webp/pdf/doc/docx (max 10MB)
 
 ## In Progress
 _Nothing._
