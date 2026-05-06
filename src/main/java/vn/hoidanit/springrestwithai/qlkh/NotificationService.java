@@ -381,8 +381,12 @@ public class NotificationService {
 
     /**
      * Backfill referenceId cho các notification INVOICE/PAYMENT cũ đang bị null.
-     * Mapping: dựa vào customerId + yearMonth (lấy từ createdAt của notification)
-     * để tìm monthInvoiceId tương ứng trong DB qlkh.
+     * Mapping:
+     * <ul>
+     *   <li>Parse yearMonth từ content (VD "tháng 03/2026" → "202603")</li>
+     *   <li>Fallback: dùng createdAt nếu content không chứa tháng</li>
+     *   <li>PAYMENT: chỉ match với hóa đơn paymentStatus = 2</li>
+     * </ul>
      *
      * @return số notification đã được cập nhật
      */
@@ -401,23 +405,32 @@ public class NotificationService {
 
         for (Notification n : orphans) {
             try {
-                // Derive yearMonth from notification's createdAt: "20260415T..." → "202604"
-                String yearMonth = formatYearMonthFromLocalDateTime(n.getCreatedAt());
+                String yearMonth = extractYearMonthFromContent(n.getContent());
+                if (yearMonth == null) {
+                    yearMonth = formatYearMonthFromLocalDateTime(n.getCreatedAt());
+                }
                 if (yearMonth == null) continue;
 
-                List<vn.hoidanit.springrestwithai.qlkh.entity.MonthInvoice> invoices =
-                        monthInvoiceRepository.findByCustomerIdAndYearMonth(n.getCustomerId(), yearMonth);
+                List<vn.hoidanit.springrestwithai.qlkh.entity.MonthInvoice> invoices;
+                if ("PAYMENT".equals(n.getType())) {
+                    invoices = monthInvoiceRepository.findPaidByCustomerIdAndYearMonth(
+                            n.getCustomerId(), yearMonth);
+                } else {
+                    invoices = monthInvoiceRepository.findByCustomerIdAndYearMonth(
+                            n.getCustomerId(), yearMonth);
+                }
 
                 if (invoices.size() == 1) {
                     n.setReferenceId(Long.valueOf(invoices.get(0).getMonthInvoiceId()));
                     notificationRepository.save(n);
                     updated++;
-                    log.debug("[Backfill] notificationId={} → monthInvoiceId={}", n.getId(), invoices.get(0).getMonthInvoiceId());
+                    log.debug("[Backfill] notificationId={} type={} → monthInvoiceId={}",
+                            n.getId(), n.getType(), invoices.get(0).getMonthInvoiceId());
                 } else if (invoices.size() > 1) {
-                    log.warn("[Backfill] notificationId={} customerId={} yearMonth={} có {} hóa đơn — bỏ qua (không xác định được).",
+                    log.warn("[Backfill] notificationId={} customerId={} yearMonth={} có {} hóa đơn — bỏ qua.",
                             n.getId(), n.getCustomerId(), yearMonth, invoices.size());
                 } else {
-                    log.warn("[Backfill] notificationId={} customerId={} yearMonth={} không tìm thấy hóa đơn.",
+                    log.warn("[Backfill] notificationId={} customerId={} yearMonth={} không tìm thấy hóa đơn matching.",
                             n.getId(), n.getCustomerId(), yearMonth);
                 }
             } catch (Exception e) {
@@ -427,6 +440,20 @@ public class NotificationService {
 
         log.info("[Backfill] Hoàn tất: cập nhật {}/{} notification.", updated, orphans.size());
         return updated;
+    }
+
+    /**
+     * Parse "MM/yyyy" từ notification content → "yyyyMM".
+     * VD: "Hóa đơn tiền nước tháng 03/2026 đã được thanh toán" → "202603"
+     * Trả về null nếu content không chứa pattern.
+     */
+    private static String extractYearMonthFromContent(String content) {
+        if (content == null) return null;
+        var matcher = java.util.regex.Pattern.compile("(\\d{2})/(\\d{4})").matcher(content);
+        if (matcher.find()) {
+            return matcher.group(2) + matcher.group(1);
+        }
+        return null;
     }
 
     private static String formatYearMonthFromLocalDateTime(java.time.LocalDateTime ldt) {
