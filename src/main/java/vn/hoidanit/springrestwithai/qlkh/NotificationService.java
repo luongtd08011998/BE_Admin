@@ -49,6 +49,7 @@ public class NotificationService {
     private final SystemNotificationReadRepository systemNotificationReadRepository;
     private final FirebaseService firebaseService;
     private final ArticleRepository articleRepository;
+    private final MonthInvoiceRepository monthInvoiceRepository;
 
     public NotificationService(CustomerDeviceRepository customerDeviceRepository,
                                NotificationRepository notificationRepository,
@@ -57,7 +58,8 @@ public class NotificationService {
                                SystemNotificationRepository systemNotificationRepository,
                                SystemNotificationReadRepository systemNotificationReadRepository,
                                FirebaseService firebaseService,
-                               ArticleRepository articleRepository) {
+                               ArticleRepository articleRepository,
+                               MonthInvoiceRepository monthInvoiceRepository) {
         this.customerDeviceRepository = customerDeviceRepository;
         this.notificationRepository = notificationRepository;
         this.notifiedInvoiceRepository = notifiedInvoiceRepository;
@@ -66,6 +68,7 @@ public class NotificationService {
         this.systemNotificationReadRepository = systemNotificationReadRepository;
         this.firebaseService = firebaseService;
         this.articleRepository = articleRepository;
+        this.monthInvoiceRepository = monthInvoiceRepository;
     }
 
     // ─── Device Token ───────────────────────────────────────────────────────
@@ -104,20 +107,20 @@ public class NotificationService {
      * Gọi khi có hóa đơn mới: lưu notification + push FCM đến mọi device của customer.
      */
     @Transactional("primaryTransactionManager")
-    public void sendNewInvoiceNotification(Integer customerId) {
+    public void sendNewInvoiceNotification(Integer customerId, Integer monthInvoiceId) {
         String title = "Hóa đơn mới";
         String content = "Bạn có hóa đơn tháng mới. Vui lòng kiểm tra chi tiết trong ứng dụng.";
-        saveAndPush(customerId, title, content, "INVOICE", null);
+        saveAndPush(customerId, title, content, "INVOICE", Long.valueOf(monthInvoiceId));
     }
 
     /**
      * Gọi khi thanh toán thành công: lưu notification + push FCM.
      */
     @Transactional("primaryTransactionManager")
-    public void sendPaymentSuccessNotification(Integer customerId) {
+    public void sendPaymentSuccessNotification(Integer customerId, Integer monthInvoiceId) {
         String title = "Thanh toán thành công";
         String content = "Bạn đã thanh toán hóa đơn thành công. Cảm ơn bạn!";
-        saveAndPush(customerId, title, content, "PAYMENT", null);
+        saveAndPush(customerId, title, content, "PAYMENT", Long.valueOf(monthInvoiceId));
     }
 
     /**
@@ -372,6 +375,63 @@ public class NotificationService {
                     customerId, tokens.size(), e.getMessage());
             // KHÔNG throw lỗi ra ngoài để Transaction vẫn được commit
         }
+    }
+
+    // ─── Backfill referenceId for old notifications ────────────────────────────
+
+    /**
+     * Backfill referenceId cho các notification INVOICE/PAYMENT cũ đang bị null.
+     * Mapping: dựa vào customerId + yearMonth (lấy từ createdAt của notification)
+     * để tìm monthInvoiceId tương ứng trong DB qlkh.
+     *
+     * @return số notification đã được cập nhật
+     */
+    @Transactional("primaryTransactionManager")
+    public int backfillNotificationReferenceId() {
+        List<Notification> orphans = notificationRepository
+                .findByTypeInAndReferenceIdNull(List.of("INVOICE", "PAYMENT"));
+
+        if (orphans.isEmpty()) {
+            log.info("[Backfill] Không có notification INVOICE/PAYMENT nào thiếu referenceId.");
+            return 0;
+        }
+
+        log.info("[Backfill] Tìm thấy {} notification cần cập nhật referenceId.", orphans.size());
+        int updated = 0;
+
+        for (Notification n : orphans) {
+            try {
+                // Derive yearMonth from notification's createdAt: "20260415T..." → "202604"
+                String yearMonth = formatYearMonthFromLocalDateTime(n.getCreatedAt());
+                if (yearMonth == null) continue;
+
+                List<vn.hoidanit.springrestwithai.qlkh.entity.MonthInvoice> invoices =
+                        monthInvoiceRepository.findByCustomerIdAndYearMonth(n.getCustomerId(), yearMonth);
+
+                if (invoices.size() == 1) {
+                    n.setReferenceId(Long.valueOf(invoices.get(0).getMonthInvoiceId()));
+                    notificationRepository.save(n);
+                    updated++;
+                    log.debug("[Backfill] notificationId={} → monthInvoiceId={}", n.getId(), invoices.get(0).getMonthInvoiceId());
+                } else if (invoices.size() > 1) {
+                    log.warn("[Backfill] notificationId={} customerId={} yearMonth={} có {} hóa đơn — bỏ qua (không xác định được).",
+                            n.getId(), n.getCustomerId(), yearMonth, invoices.size());
+                } else {
+                    log.warn("[Backfill] notificationId={} customerId={} yearMonth={} không tìm thấy hóa đơn.",
+                            n.getId(), n.getCustomerId(), yearMonth);
+                }
+            } catch (Exception e) {
+                log.error("[Backfill] Lỗi khi xử lý notificationId={}: {}", n.getId(), e.getMessage());
+            }
+        }
+
+        log.info("[Backfill] Hoàn tất: cập nhật {}/{} notification.", updated, orphans.size());
+        return updated;
+    }
+
+    private static String formatYearMonthFromLocalDateTime(java.time.LocalDateTime ldt) {
+        if (ldt == null) return null;
+        return String.format("%d%02d", ldt.getYear(), ldt.getMonthValue());
     }
 
     private static String statusLabel(FeedbackStatus status) {
