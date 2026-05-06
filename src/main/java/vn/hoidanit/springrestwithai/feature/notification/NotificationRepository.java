@@ -24,4 +24,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Transactional
     @Query("UPDATE Notification n SET n.isRead = true WHERE n.customerId = :customerId")
     int markAllAsRead(@Param("customerId") Integer customerId);
+
+    @Query("SELECT n FROM Notification n WHERE n.type IN :types AND n.referenceId IS NULL")
+    List<Notification> findByTypeInAndReferenceIdNull(@Param("types") List<String> types);
 }

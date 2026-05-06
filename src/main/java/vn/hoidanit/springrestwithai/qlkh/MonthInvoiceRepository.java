@@ -99,4 +99,7 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
             @Param("fromYearMonth") String fromYearMonth,
             @Param("excludeIds") List<Integer> excludeIds,
             Pageable pageable);
+
+    @Query("SELECT m FROM MonthInvoice m WHERE m.customerId = :customerId AND m.yearMonth = :yearMonth")
+    List<MonthInvoice> findByCustomerIdAndYearMonth(@Param("customerId") Integer customerId, @Param("yearMonth") String yearMonth);
 }

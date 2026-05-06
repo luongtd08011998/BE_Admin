@@ -12,7 +12,6 @@ import vn.hoidanit.springrestwithai.dto.ApiResponse;
 import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
 import vn.hoidanit.springrestwithai.qlkh.dto.MarkReadRequest;
 import vn.hoidanit.springrestwithai.qlkh.dto.NotificationResponse;
-import vn.hoidanit.springrestwithai.feature.notification.entity.Notification;
 
 import java.util.List;
 
@@ -74,13 +73,23 @@ public class NotificationController {
     @GetMapping("/test-push")
     public ResponseEntity<ApiResponse<String>> testPushFirebase(
             @RequestHeader("Authorization") String authHeader) {
-        
+
         Integer customerId = extractCustomerId(authHeader);
-        // Gọi service lưu và bắn push "Hóa đơn mới"
-        notificationService.sendNewInvoiceNotification(customerId);
-        
+        // Gọi service lưu và bắn push "Hóa đơn mới" (dùng ID 0 cho test)
+        notificationService.sendNewInvoiceNotification(customerId, 0);
+
         return ResponseEntity.ok(ApiResponse.success(
                 "Đã gọi lệnh bắn Push Notification", "Vui lòng kiểm tra điện thoại của bạn"));
+    }
+
+    /**
+     * Admin: Backfill referenceId cho notification INVOICE/PAYMENT cũ đang bị null.
+     */
+    @PostMapping("/backfill-reference-id")
+    public ResponseEntity<ApiResponse<String>> backfillReferenceId() {
+        int updated = notificationService.backfillNotificationReferenceId();
+        return ResponseEntity.ok(ApiResponse.success(
+                "Backfill hoàn tất", "Đã cập nhật " + updated + " notification"));
     }
 
 
