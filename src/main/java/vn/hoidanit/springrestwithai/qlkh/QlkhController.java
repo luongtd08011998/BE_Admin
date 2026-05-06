@@ -44,6 +44,7 @@ import vn.hoidanit.springrestwithai.feature.auth.CustomerRefreshTokenRepository;
 import vn.hoidanit.springrestwithai.qlkh.dto.CustomerLoginRequest;
 import vn.hoidanit.springrestwithai.qlkh.dto.CustomerLoginResponse;
 import vn.hoidanit.springrestwithai.qlkh.dto.InvoiceResponse;
+import vn.hoidanit.springrestwithai.qlkh.dto.InvoiceViewResponse;
 import vn.hoidanit.springrestwithai.qlkh.dto.MonthInvoiceReadingItemResponse;
 import vn.hoidanit.springrestwithai.qlkh.dto.RefreshTokenRequest;
 import vn.hoidanit.springrestwithai.qlkh.dto.SalesInvoiceResponse;
@@ -51,6 +52,7 @@ import vn.hoidanit.springrestwithai.qlkh.dto.TokenResponse;
 import vn.hoidanit.springrestwithai.qlkh.entity.Customer;
 import vn.hoidanit.springrestwithai.qlkh.entity.MonthInvoice;
 import vn.hoidanit.springrestwithai.qlkh.entity.SalesInvoice;
+import vn.hoidanit.springrestwithai.qlkh.vnpt.VnptInvoiceHtmlParser;
 import vn.hoidanit.springrestwithai.qlkh.vnpt.VnptPortalInvoiceClient;
 import vn.hoidanit.springrestwithai.qlkh.vnpt.VnptPortalInvoiceClient.VnptDebugResult;
 
@@ -62,6 +64,7 @@ public class QlkhController {
     private final MonthInvoiceRepository monthInvoiceRepository;
     private final SalesInvoiceRepository salesInvoiceRepository;
     private final VnptPortalInvoiceClient vnptPortalInvoiceClient;
+    private final VnptInvoiceHtmlParser vnptInvoiceHtmlParser;
     private final JwtEncoder jwtEncoder;
     private final JwtDecoder jwtDecoder;
     private final ArticleService articleService;
@@ -79,6 +82,7 @@ public class QlkhController {
             MonthInvoiceRepository monthInvoiceRepository,
             SalesInvoiceRepository salesInvoiceRepository,
             VnptPortalInvoiceClient vnptPortalInvoiceClient,
+            VnptInvoiceHtmlParser vnptInvoiceHtmlParser,
             JwtEncoder jwtEncoder,
             JwtDecoder jwtDecoder,
             ArticleService articleService,
@@ -87,6 +91,7 @@ public class QlkhController {
         this.monthInvoiceRepository = monthInvoiceRepository;
         this.salesInvoiceRepository = salesInvoiceRepository;
         this.vnptPortalInvoiceClient = vnptPortalInvoiceClient;
+        this.vnptInvoiceHtmlParser = vnptInvoiceHtmlParser;
         this.jwtEncoder = jwtEncoder;
         this.jwtDecoder = jwtDecoder;
         this.articleService = articleService;
@@ -311,6 +316,57 @@ public class QlkhController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
                 .contentType(isZip ? MediaType.parseMediaType("application/zip") : MediaType.APPLICATION_XML)
+                .body(body);
+    }
+
+    /**
+     * Xem thông tin hóa đơn điện tử từ VNPT — trả JSON.
+     * Parse HTML từ {@code getInvViewFkey}/getInvViewFkeyNoPay} thành cấu trúc.
+     */
+    @GetMapping("/invoices/{invoiceId}/e-invoice-view")
+    public ResponseEntity<ApiResponse<InvoiceViewResponse>> viewMonthEInvoice(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Integer invoiceId) {
+        Customer customer = getCustomerFromToken(authHeader);
+        MonthInvoice invoice = monthInvoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Hóa đơn", "id", invoiceId));
+        if (!invoice.getCustomerId().equals(customer.getCustomerId())) {
+            throw new ResourceNotFoundException("Hóa đơn", "id", invoiceId);
+        }
+        String fkey = invoice.getFkey();
+        if (fkey == null || fkey.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Hóa đơn chưa có mã Fkey — chưa thể xem từ hệ thống hóa đơn điện tử.");
+        }
+        String vnptFkey = normalizeVnptFkey(fkey.trim());
+        String payload = vnptPortalInvoiceClient.getInvView(vnptFkey);
+        if (payload.startsWith("ERR:")) {
+            throw new IllegalArgumentException("VNPT: " + payload.trim());
+        }
+        String status = payload.contains("CHƯA THANH TOÁN") ? "UNPAID" : "PAID";
+        InvoiceViewResponse dto = vnptInvoiceHtmlParser.parse(payload, status);
+        return ResponseEntity.ok(ApiResponse.success(dto));
+    }
+
+    /**
+     * Danh sách hóa đơn điện tử từ VNPT theo mã khách hàng (cusCode).
+     * Trả về XML với các thẻ {@code <Inv>} — status: 1=phát hành, 3=thay thế, 4=điều chỉnh.
+     * fromDate/toDate: định dạng dd/MM/yyyy, bỏ trống để lấy tất cả.
+     */
+    @GetMapping("/invoices/e-invoice-list")
+    public ResponseEntity<byte[]> listEInvoices(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(required = false) String fromDate,
+            @RequestParam(required = false) String toDate) {
+        Customer customer = getCustomerFromToken(authHeader);
+        String cusCode = customer.getDigiCode();
+        String payload = vnptPortalInvoiceClient.listInvByCus(cusCode, fromDate, toDate);
+        if (payload.startsWith("ERR:")) {
+            throw new IllegalArgumentException("VNPT: " + payload.trim());
+        }
+        byte[] body = payload.getBytes(StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_XML)
                 .body(body);
     }
 

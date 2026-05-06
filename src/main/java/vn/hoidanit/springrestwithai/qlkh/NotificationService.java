@@ -154,7 +154,17 @@ public class NotificationService {
         // 1. Lấy thông báo cá nhân
         List<Notification> personalNotifs = notificationRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
         List<NotificationResponse> responses = new ArrayList<>(personalNotifs.stream()
-                .map(n -> new NotificationResponse(n.getId(), n.getCustomerId(), n.getTitle(), n.getContent(), n.getType(), n.getIsRead(), n.getCreatedAt(), null, false, null))
+                .map(n -> new NotificationResponse(
+                        n.getId(),
+                        n.getCustomerId(),
+                        n.getTitle(),
+                        n.getContent(),
+                        n.getType(),
+                        n.getIsRead(),
+                        n.getCreatedAt(),
+                        n.getReferenceId(),
+                        false,
+                        null))
                 .toList());
 
         // 2. Lấy thông báo hệ thống
@@ -231,9 +241,11 @@ public class NotificationService {
         sn.setReferenceId(referenceId);
         systemNotificationRepository.save(sn);
 
-        Map<String, String> data = null;
+        // Luôn gửi kèm data payload để Mobile deep link
+        java.util.Map<String, String> data = new java.util.HashMap<>();
+        data.put("type", type);
         if (referenceId != null) {
-            data = Map.of("referenceId", referenceId.toString(), "type", type);
+            data.put("referenceId", referenceId.toString());
         }
 
         firebaseService.sendToTopicAsync("general_news", title, content, data);
@@ -260,7 +272,7 @@ public class NotificationService {
         String title = "Hóa đơn mới tháng " + formatYearMonth(yearMonth);
         String content = "Hóa đơn tiền nước tháng " + formatYearMonth(yearMonth)
                 + " của bạn đã có. Vui lòng kiểm tra và thanh toán đúng hạn.";
-        saveAndPush(customerId, title, content, "INVOICE", null);
+        saveAndPush(customerId, title, content, "INVOICE", Long.valueOf(monthInvoiceId));
 
 
         // Đánh dấu đã gửi
@@ -293,7 +305,7 @@ public class NotificationService {
         String title = "Thanh toán thành công";
         String content = "Hóa đơn tiền nước tháng " + formatYearMonth(yearMonth)
                 + " đã được thanh toán thành công. Cảm ơn bạn!";
-        saveAndPush(customerId, title, content, "PAYMENT", null);
+        saveAndPush(customerId, title, content, "PAYMENT", Long.valueOf(monthInvoiceId));
 
         // Đánh dấu đã gửi
         NotifiedPayment mark = new NotifiedPayment();
@@ -346,18 +358,15 @@ public class NotificationService {
             return;
         }
 
-        // 3. Thêm data payload để Mobile deep link (chỉ khi có referenceId)
-        Map<String, String> data = null;
+        // 3. Luôn gửi kèm data payload để Mobile deep link
+        java.util.Map<String, String> data = new java.util.HashMap<>();
+        data.put("type", type);
         if (referenceId != null) {
-            data = Map.of("type", type, "referenceId", referenceId.toString());
+            data.put("referenceId", referenceId.toString());
         }
 
         try {
-            if (data != null) {
-                firebaseService.sendToMultipleTokensWithDataAsync(tokens, title, content, data);
-            } else {
-                firebaseService.sendToMultipleTokensAsync(tokens, title, content);
-            }
+            firebaseService.sendToMultipleTokensWithDataAsync(tokens, title, content, data);
         } catch (Exception e) {
             log.error("Failed to send FCM push to customerId={} (tokens: {}): {}",
                     customerId, tokens.size(), e.getMessage());
