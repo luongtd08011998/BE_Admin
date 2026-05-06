@@ -31,6 +31,10 @@ public class VnptPortalInvoiceClient {
     private static final Logger log = LoggerFactory.getLogger(VnptPortalInvoiceClient.class);
     private static final String TEMPURI = "http://tempuri.org/";
     private static final String SOAP_ACTION_DOWNLOAD_INV_ZIP_FKEY = "\"http://tempuri.org/downloadInvZipFkey\"";
+    private static final String SOAP_ACTION_GET_INV_VIEW_FKEY = "\"http://tempuri.org/getInvViewFkey\"";
+    private static final String SOAP_ACTION_GET_INV_VIEW_FKEY_NO_PAY = "\"http://tempuri.org/getInvViewFkeyNoPay\"";
+    private static final String SOAP_ACTION_LIST_INV_BY_CUS = "\"http://tempuri.org/listInvByCus\"";
+    private static final String ERR_NOT_PAID = "ERR:11";
 
     private final VnptPortalProperties properties;
     private final RestClient restClient;
@@ -57,6 +61,42 @@ public class VnptPortalInvoiceClient {
                     "Chưa cấu hình vnpt.portal (service-url, username, password).");
         }
         return callDownloadInvZipFkey(fkey, checkPayment, properties.getUsername(), properties.getPassword(), "primary");
+    }
+
+    public String getInvView(String fkey) {
+        if (!properties.isConfigured()) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Chưa cấu hình vnpt.portal (service-url, username, password).");
+        }
+        String result = callGetInvViewFkey(fkey, properties.getUsername(), properties.getPassword());
+        if (ERR_NOT_PAID.equals(result.trim())) {
+            log.info("VNPT: hóa đơn chưa thanh toán (ERR:11), fallback sang getInvViewFkeyNoPay");
+            result = callGetInvViewFkeyNoPay(fkey, properties.getUsername(), properties.getPassword());
+        }
+        return result;
+    }
+
+    public VnptDebugResult debugGetInvView(String fkey) {
+        if (!properties.isConfigured()) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Chưa cấu hình vnpt.portal (service-url, username, password).");
+        }
+        String fkeyMasked = maskFkey(fkey);
+        String url = properties.getServiceUrl();
+        String r1 = callGetInvViewFkey(fkey, properties.getUsername(), properties.getPassword());
+        return new VnptDebugResult(url, maskUser(properties.getUsername()), fkeyMasked, resultPrefix(r1));
+    }
+
+    public String listInvByCus(String cusCode, String fromDate, String toDate) {
+        if (!properties.isConfigured()) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Chưa cấu hình vnpt.portal (service-url, username, password).");
+        }
+        return callListInvByCus(cusCode, fromDate, toDate,
+                properties.getUsername(), properties.getPassword());
     }
 
     public VnptDebugResult debugDownloadInvZipFkey(String fkey, boolean checkPayment) {
@@ -110,6 +150,57 @@ public class VnptPortalInvoiceClient {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "VNPT trả về rỗng.");
         }
         return extractResultByLocalName(responseXml, "downloadInvZipFkeyResult");
+    }
+
+    private String callGetInvViewFkey(String fkey, String userName, String userPass) {
+        log.info("VNPT call: op=getInvViewFkey, url={}, user={}, fkey={}",
+                properties.getServiceUrl(), maskUser(userName), maskFkey(fkey));
+        String soap = buildSoap11RequestGetInvViewFkey(xmlEscape(fkey), xmlEscape(userName), xmlEscape(userPass));
+        String responseXml = callSoap(SOAP_ACTION_GET_INV_VIEW_FKEY, soap);
+        return extractResultByLocalName(responseXml, "getInvViewFkeyResult");
+    }
+
+    private String callGetInvViewFkeyNoPay(String fkey, String userName, String userPass) {
+        log.info("VNPT call: op=getInvViewFkeyNoPay, url={}, user={}, fkey={}",
+                properties.getServiceUrl(), maskUser(userName), maskFkey(fkey));
+        String soap = buildSoap11RequestGetInvViewFkeyNoPay(xmlEscape(fkey), xmlEscape(userName), xmlEscape(userPass));
+        String responseXml = callSoap(SOAP_ACTION_GET_INV_VIEW_FKEY_NO_PAY, soap);
+        return extractResultByLocalName(responseXml, "getInvViewFkeyNoPayResult");
+    }
+
+    private String callListInvByCus(String cusCode, String fromDate, String toDate,
+                                    String userName, String userPass) {
+        log.info("VNPT call: op=listInvByCus, url={}, user={}, cusCode={}, fromDate={}, toDate={}",
+                properties.getServiceUrl(), maskUser(userName), cusCode, fromDate, toDate);
+        String soap = buildSoap11RequestListInvByCus(
+                xmlEscape(cusCode),
+                fromDate != null ? xmlEscape(fromDate) : "",
+                toDate != null ? xmlEscape(toDate) : "",
+                xmlEscape(userName),
+                xmlEscape(userPass));
+        String responseXml = callSoap(SOAP_ACTION_LIST_INV_BY_CUS, soap);
+        return extractResultByLocalName(responseXml, "listInvByCusResult");
+    }
+
+    private String callSoap(String soapAction, String soapBody) {
+        try {
+            String responseXml = restClient
+                    .post()
+                    .uri(properties.getServiceUrl())
+                    .contentType(MediaType.parseMediaType("text/xml; charset=utf-8"))
+                    .header("SOAPAction", soapAction)
+                    .body(soapBody)
+                    .retrieve()
+                    .body(String.class);
+            if (responseXml == null || responseXml.isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "VNPT trả về rỗng.");
+            }
+            return responseXml;
+        } catch (RestClientException ex) {
+            log.warn("VNPT PortalService gọi thất bại: {}", ex.getMessage());
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY, "Không kết nối được máy chủ hóa đơn điện tử VNPT.", ex);
+        }
     }
 
     private static String resultPrefix(String result) {
@@ -175,6 +266,57 @@ public class VnptPortalInvoiceClient {
                 </soap:Envelope>
                 """
                 .formatted(fkey, userName, userPass, checkPayment);
+    }
+
+    private static String buildSoap11RequestGetInvViewFkey(String fkey, String userName, String userPass) {
+        return """
+                <?xml version="1.0" encoding="utf-8"?>
+                <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+                <soap:Body>
+                <getInvViewFkey xmlns="http://tempuri.org/">
+                <fkey>%s</fkey>
+                <userName>%s</userName>
+                <userPass>%s</userPass>
+                </getInvViewFkey>
+                </soap:Body>
+                </soap:Envelope>
+                """
+                .formatted(fkey, userName, userPass);
+    }
+
+    private static String buildSoap11RequestGetInvViewFkeyNoPay(String fkey, String userName, String userPass) {
+        return """
+                <?xml version="1.0" encoding="utf-8"?>
+                <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+                <soap:Body>
+                <getInvViewFkeyNoPay xmlns="http://tempuri.org/">
+                <fkey>%s</fkey>
+                <userName>%s</userName>
+                <userPass>%s</userPass>
+                </getInvViewFkeyNoPay>
+                </soap:Body>
+                </soap:Envelope>
+                """
+                .formatted(fkey, userName, userPass);
+    }
+
+    private static String buildSoap11RequestListInvByCus(String cusCode, String fromDate,
+                                                         String toDate, String userName, String userPass) {
+        return """
+                <?xml version="1.0" encoding="utf-8"?>
+                <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+                <soap:Body>
+                <listInvByCus xmlns="http://tempuri.org/">
+                <cusCode>%s</cusCode>
+                <fromDate>%s</fromDate>
+                <toDate>%s</toDate>
+                <userName>%s</userName>
+                <userPass>%s</userPass>
+                </listInvByCus>
+                </soap:Body>
+                </soap:Envelope>
+                """
+                .formatted(cusCode, fromDate, toDate, userName, userPass);
     }
 
     private static String xmlEscape(String raw) {
