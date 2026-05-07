@@ -380,66 +380,90 @@ public class NotificationService {
     // ─── Backfill referenceId for old notifications ────────────────────────────
 
     /**
-     * Backfill referenceId cho các notification INVOICE/PAYMENT cũ đang bị null.
-     * Mapping:
+     * Backfill + sửa sai referenceId cho notification INVOICE/PAYMENT.
+     * Fix cả 2 trường hợp:
      * <ul>
-     *   <li>Parse yearMonth từ content (VD "tháng 03/2026" → "202603")</li>
-     *   <li>Fallback: dùng createdAt nếu content không chứa tháng</li>
-     *   <li>PAYMENT: chỉ match với hóa đơn paymentStatus = 2</li>
+     *   <li>referenceId = NULL</li>
+     *   <li>referenceId trỏ sai invoice (content_month != invoice_month)</li>
      * </ul>
      *
      * @return số notification đã được cập nhật
      */
     @Transactional("primaryTransactionManager")
     public int backfillNotificationReferenceId() {
-        List<Notification> orphans = notificationRepository
-                .findByTypeInAndReferenceIdNull(List.of("INVOICE", "PAYMENT"));
-
-        if (orphans.isEmpty()) {
-            log.info("[Backfill] Không có notification INVOICE/PAYMENT nào thiếu referenceId.");
+        List<Notification> all = notificationRepository.findByTypeIn(List.of("INVOICE", "PAYMENT"));
+        if (all.isEmpty()) {
+            log.info("[Backfill] Không có notification INVOICE/PAYMENT nào.");
             return 0;
         }
 
-        log.info("[Backfill] Tìm thấy {} notification cần cập nhật referenceId.", orphans.size());
-        int updated = 0;
+        log.info("[Backfill] Quét {} notification INVOICE/PAYMENT...", all.size());
+        int fixed = 0;
 
-        for (Notification n : orphans) {
+        for (Notification n : all) {
             try {
-                String yearMonth = extractYearMonthFromContent(n.getContent());
-                if (yearMonth == null) {
-                    yearMonth = formatYearMonthFromLocalDateTime(n.getCreatedAt());
+                String contentMonth = extractYearMonthFromContent(n.getContent());
+                if (contentMonth == null) {
+                    contentMonth = formatYearMonthFromLocalDateTime(n.getCreatedAt());
                 }
-                if (yearMonth == null) continue;
+                if (contentMonth == null) continue;
 
+                // Nếu đã có referenceId → kiểm tra có đúng không
+                if (n.getReferenceId() != null) {
+                    var currentInvoice = monthInvoiceRepository.findById(n.getReferenceId().intValue());
+                    if (currentInvoice.isPresent()) {
+                        var inv = currentInvoice.get();
+                        boolean monthMatch = contentMonth.equals(inv.getYearMonth());
+                        // PAYMENT notification phải trỏ tới invoice ĐÃ THANH TOÁN
+                        boolean statusMatch = !"PAYMENT".equals(n.getType())
+                                || Integer.valueOf(2).equals(inv.getPaymentStatus());
+                        if (monthMatch && statusMatch) {
+                            continue; // Đúng rồi, bỏ qua
+                        }
+                        if (!monthMatch) {
+                            log.warn("[Backfill] notificationId={} referenceId={} sai tháng (content={}, invoice={})",
+                                    n.getId(), n.getReferenceId(), contentMonth, inv.getYearMonth());
+                        }
+                        if (!statusMatch) {
+                            log.warn("[Backfill] notificationId={} PAYMENT referenceId={} trỏ invoice chưa thanh toán (PaymentStatus={})",
+                                    n.getId(), n.getReferenceId(), inv.getPaymentStatus());
+                        }
+                    }
+                }
+
+                // Tìm invoice đúng theo content month
                 List<vn.hoidanit.springrestwithai.qlkh.entity.MonthInvoice> invoices;
                 if ("PAYMENT".equals(n.getType())) {
                     invoices = monthInvoiceRepository.findPaidByCustomerIdAndYearMonth(
-                            n.getCustomerId(), yearMonth);
+                            n.getCustomerId(), contentMonth);
                 } else {
                     invoices = monthInvoiceRepository.findByCustomerIdAndYearMonth(
-                            n.getCustomerId(), yearMonth);
+                            n.getCustomerId(), contentMonth);
                 }
 
-                if (invoices.size() == 1) {
+                if (invoices.size() >= 1) {
                     n.setReferenceId(Long.valueOf(invoices.get(0).getMonthInvoiceId()));
                     notificationRepository.save(n);
-                    updated++;
-                    log.debug("[Backfill] notificationId={} type={} → monthInvoiceId={}",
-                            n.getId(), n.getType(), invoices.get(0).getMonthInvoiceId());
-                } else if (invoices.size() > 1) {
-                    log.warn("[Backfill] notificationId={} customerId={} yearMonth={} có {} hóa đơn — bỏ qua.",
-                            n.getId(), n.getCustomerId(), yearMonth, invoices.size());
+                    fixed++;
+                    log.info("[Backfill] FIXED notificationId={} → monthInvoiceId={}",
+                            n.getId(), invoices.get(0).getMonthInvoiceId());
+                } else if ("PAYMENT".equals(n.getType())) {
+                    // PAYMENT notification nhưng không có invoice đã thanh toán → xóa notification
+                    notificationRepository.delete(n);
+                    fixed++;
+                    log.warn("[Backfill] DELETED notificationId={} type=PAYMENT — không có hóa đơn đã thanh toán cho customerId={} month={}",
+                            n.getId(), n.getCustomerId(), contentMonth);
                 } else {
-                    log.warn("[Backfill] notificationId={} customerId={} yearMonth={} không tìm thấy hóa đơn matching.",
-                            n.getId(), n.getCustomerId(), yearMonth);
+                    log.warn("[Backfill] notificationId={} customerId={} yearMonth={} không tìm thấy hóa đơn.",
+                            n.getId(), n.getCustomerId(), contentMonth);
                 }
             } catch (Exception e) {
-                log.error("[Backfill] Lỗi khi xử lý notificationId={}: {}", n.getId(), e.getMessage());
+                log.error("[Backfill] Lỗi notificationId={}: {}", n.getId(), e.getMessage());
             }
         }
 
-        log.info("[Backfill] Hoàn tất: cập nhật {}/{} notification.", updated, orphans.size());
-        return updated;
+        log.info("[Backfill] Hoàn tất: sửa {}/{} notification.", fixed, all.size());
+        return fixed;
     }
 
     /**
