@@ -197,6 +197,7 @@ public class NotificationService {
                         .collect(Collectors.toMap(Article::getId, Article::getSlug, (a, b) -> a));
 
         List<NotificationResponse> systemResponses = systemNotifs.stream()
+                .filter(sn -> sn.getReferenceId() == null || articleSlugMap.containsKey(sn.getReferenceId()))
                 .map(sn -> new NotificationResponse(
                         sn.getId(),
                         customerId,
