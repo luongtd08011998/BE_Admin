@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 
 /**
@@ -12,7 +13,9 @@ import jakarta.persistence.Table;
  * và khóa tích hợp hóa đơn điện tử ({@code RootKey}, {@code Fkey}).
  */
 @Entity
-@Table(name = "monthinvoice")
+@Table(name = "monthinvoice", indexes = {
+        @Index(name = "idx_customer_yearmonth", columnList = "CustomerId, YearMonth")
+})
 public class MonthInvoice {
 
     @Id
