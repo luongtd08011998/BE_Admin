@@ -419,7 +419,7 @@ public class NotificationService {
 
         log.info("[Backfill] Quét {} notification INVOICE/PAYMENT...", all.size());
 
-        // Pre-compute contentMonth cho tất cả notification
+        // Pre-compute contentMonth
         Map<Long, String> notificationMonthMap = new HashMap<>();
         for (Notification n : all) {
             String contentMonth = extractYearMonthFromContent(n.getContent());
@@ -431,7 +431,7 @@ public class NotificationService {
             }
         }
 
-        // Batch load invoices theo referenceId hiện tại để validate
+        // Bước 1: Batch validate referenceId hiện tại (1 query duy nhất)
         List<Integer> existingRefIds = all.stream()
                 .filter(n -> n.getReferenceId() != null)
                 .map(n -> n.getReferenceId().intValue())
@@ -442,10 +442,40 @@ public class NotificationService {
                 : monthInvoiceRepository.findAllById(existingRefIds).stream()
                         .collect(Collectors.toMap(MonthInvoice::getMonthInvoiceId, inv -> inv, (a, b) -> a));
 
-        // Cache invoices theo (customerId, yearMonth) — tránh query lặp lại
+        // Bước 2: Lọc ra CHỈ những notification thực sự cần sửa
+        List<Notification> needsFix = new ArrayList<>();
+        for (Notification n : all) {
+            String contentMonth = notificationMonthMap.get(n.getId());
+            if (contentMonth == null) continue;
+
+            if (n.getReferenceId() == null) {
+                needsFix.add(n);
+                continue;
+            }
+            MonthInvoice currentInvoice = refInvoiceMap.get(n.getReferenceId().intValue());
+            if (currentInvoice == null) {
+                needsFix.add(n);
+                continue;
+            }
+            boolean monthMatch = contentMonth.equals(currentInvoice.getYearMonth());
+            boolean statusMatch = !"PAYMENT".equals(n.getType())
+                    || Integer.valueOf(2).equals(currentInvoice.getPaymentStatus());
+            if (!monthMatch || !statusMatch) {
+                needsFix.add(n);
+            }
+        }
+
+        if (needsFix.isEmpty()) {
+            log.info("[Backfill] Tất cả {} notification đã đúng — không cần sửa.", all.size());
+            return 0;
+        }
+
+        log.info("[Backfill] Cần sửa {}/{} notification.", needsFix.size(), all.size());
+
+        // Bước 3: CHỈ load invoices cho notification cần sửa
         Map<String, List<MonthInvoice>> invoiceCache = new HashMap<>();
         Set<String> combos = new HashSet<>();
-        for (Notification n : all) {
+        for (Notification n : needsFix) {
             String month = notificationMonthMap.get(n.getId());
             if (month != null && n.getCustomerId() != null) {
                 combos.add(n.getCustomerId() + "_" + month);
@@ -458,36 +488,16 @@ public class NotificationService {
             invoiceCache.put(combo, monthInvoiceRepository.findByCustomerIdAndYearMonth(custId, ym));
         }
 
-        // Process notifications using cached data
+        // Bước 4: Process
         int fixed = 0;
         List<Notification> toSave = new ArrayList<>();
         List<Notification> toDelete = new ArrayList<>();
 
-        for (Notification n : all) {
+        for (Notification n : needsFix) {
             try {
                 String contentMonth = notificationMonthMap.get(n.getId());
                 if (contentMonth == null) continue;
 
-                // Nếu đã có referenceId → kiểm tra có đúng không
-                if (n.getReferenceId() != null) {
-                    MonthInvoice currentInvoice = refInvoiceMap.get(n.getReferenceId().intValue());
-                    if (currentInvoice != null) {
-                        boolean monthMatch = contentMonth.equals(currentInvoice.getYearMonth());
-                        boolean statusMatch = !"PAYMENT".equals(n.getType())
-                                || Integer.valueOf(2).equals(currentInvoice.getPaymentStatus());
-                        if (monthMatch && statusMatch) continue;
-                        if (!monthMatch) {
-                            log.warn("[Backfill] notificationId={} referenceId={} sai tháng (content={}, invoice={})",
-                                    n.getId(), n.getReferenceId(), contentMonth, currentInvoice.getYearMonth());
-                        }
-                        if (!statusMatch) {
-                            log.warn("[Backfill] notificationId={} PAYMENT referenceId={} trỏ invoice chưa thanh toán (PaymentStatus={})",
-                                    n.getId(), n.getReferenceId(), currentInvoice.getPaymentStatus());
-                        }
-                    }
-                }
-
-                // Tìm invoice đúng từ cache
                 String key = n.getCustomerId() + "_" + contentMonth;
                 List<MonthInvoice> invoices = invoiceCache.get(key);
                 if ("PAYMENT".equals(n.getType())) {
@@ -518,7 +528,6 @@ public class NotificationService {
             }
         }
 
-        // Batch save/delete
         if (!toSave.isEmpty()) {
             notificationRepository.saveAll(toSave);
         }
