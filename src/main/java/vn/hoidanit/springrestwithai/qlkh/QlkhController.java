@@ -11,6 +11,7 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
@@ -119,6 +120,7 @@ public class QlkhController {
      * Body: { "refreshToken": "<uuid>" }
      */
     @PostMapping("/auth/refresh")
+    @Transactional("primaryTransactionManager")
     public ResponseEntity<ApiResponse<TokenResponse>> refresh(
             @RequestBody RefreshTokenRequest request) {
         if (request.refreshToken() == null || request.refreshToken().isBlank()) {
@@ -143,6 +145,7 @@ public class QlkhController {
      * Yêu cầu Access Token còn hợp lệ trong header Authorization.
      */
     @PostMapping("/auth/logout")
+    @Transactional("primaryTransactionManager")
     public ResponseEntity<ApiResponse<Void>> logout(
             @RequestHeader("Authorization") String authHeader) {
         Customer customer = getCustomerFromToken(authHeader);
