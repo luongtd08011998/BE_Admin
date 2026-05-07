@@ -12,4 +12,6 @@ public interface SystemNotificationReadRepository extends JpaRepository<SystemNo
     List<SystemNotificationRead> findByCustomerId(Integer customerId);
 
     boolean existsBySystemNotificationIdAndCustomerId(Long systemNotificationId, Integer customerId);
+
+    void deleteBySystemNotificationId(Long systemNotificationId);
 }

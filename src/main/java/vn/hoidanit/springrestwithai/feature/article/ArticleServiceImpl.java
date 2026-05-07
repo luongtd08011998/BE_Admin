@@ -196,6 +196,7 @@ public class ArticleServiceImpl implements ArticleService {
         if (!articleRepository.existsById(id)) {
             throw new ResourceNotFoundException("Bài viết", "id", id);
         }
+        notificationService.deleteSystemNotificationByArticleId(id);
         articleRepository.deleteById(id);
     }
 
