@@ -92,6 +92,16 @@ public class NotificationController {
                 "Backfill hoàn tất", "Đã cập nhật " + updated + " notification"));
     }
 
+    /**
+     * Admin: Xoá SystemNotification mồ côi (article đã bị xóa).
+     */
+    @PostMapping("/cleanup-orphaned")
+    public ResponseEntity<ApiResponse<String>> cleanupOrphaned() {
+        int deleted = notificationService.cleanupOrphanedSystemNotifications();
+        return ResponseEntity.ok(ApiResponse.success(
+                "Cleanup hoàn tất", "Đã xoá " + deleted + " notification mồ côi"));
+    }
+
 
 
     private Integer extractCustomerId(String authHeader) {

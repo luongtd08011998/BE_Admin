@@ -344,6 +344,67 @@ public class NotificationService {
         return true;
     }
 
+    /**
+     * Xoá SystemNotification + SystemNotificationRead liên quan đến 1 article.
+     * Được gọi tự động khi xoá bài viết.
+     */
+    @Transactional("primaryTransactionManager")
+    public void deleteSystemNotificationByArticleId(Long articleId) {
+        List<SystemNotification> related = systemNotificationRepository.findAll().stream()
+                .filter(sn -> articleId.equals(sn.getReferenceId()))
+                .toList();
+        for (SystemNotification sn : related) {
+            systemNotificationReadRepository.deleteBySystemNotificationId(sn.getId());
+        }
+        if (!related.isEmpty()) {
+            systemNotificationRepository.deleteAll(related);
+            log.info("Deleted {} SystemNotification for articleId={}", related.size(), articleId);
+        }
+    }
+
+    /**
+     * Xoá SystemNotification mồ côi (referenceId trỏ đến article đã bị xóa).
+     * Đồng thời xoá luôn các bản ghi read tương ứng.
+     *
+     * @return số notification đã xoá
+     */
+    @Transactional("primaryTransactionManager")
+    public int cleanupOrphanedSystemNotifications() {
+        List<SystemNotification> all = systemNotificationRepository.findAll();
+        if (all.isEmpty()) return 0;
+
+        List<Long> articleIds = all.stream()
+                .map(SystemNotification::getReferenceId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        if (articleIds.isEmpty()) return 0;
+
+        Map<Long, String> existingArticles = articleRepository.findAllById(articleIds).stream()
+                .collect(Collectors.toMap(Article::getId, Article::getSlug, (a, b) -> a));
+
+        List<SystemNotification> orphans = all.stream()
+                .filter(sn -> sn.getReferenceId() != null && !existingArticles.containsKey(sn.getReferenceId()))
+                .toList();
+
+        if (orphans.isEmpty()) {
+            log.info("[Cleanup] Không có SystemNotification mồ côi.");
+            return 0;
+        }
+
+        List<Long> orphanIds = orphans.stream().map(SystemNotification::getId).toList();
+
+        // Xoá read records trước (để không vi phạm FK nếu có)
+        for (Long id : orphanIds) {
+            systemNotificationReadRepository.deleteBySystemNotificationId(id);
+        }
+
+        systemNotificationRepository.deleteAll(orphans);
+        log.info("[Cleanup] Đã xoá {} SystemNotification mồ côi: {}", orphans.size(), orphanIds);
+        return orphans.size();
+    }
+
     private static String formatYearMonth(String ym) {
         if (ym == null || ym.length() != 6) return ym;
         // "202604" → "04/2026"
