@@ -23,8 +23,16 @@ import vn.hoidanit.springrestwithai.feature.feedback.entity.FeedbackStatus;
 import vn.hoidanit.springrestwithai.qlkh.dto.NotificationResponse;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import vn.hoidanit.springrestwithai.feature.article.Article;
+import vn.hoidanit.springrestwithai.qlkh.entity.MonthInvoice;
 
 /**
  * Xử lý nghiệp vụ thông báo:
@@ -173,7 +181,20 @@ public class NotificationService {
         // 2. Lấy thông báo hệ thống
         List<SystemNotification> systemNotifs = systemNotificationRepository.findAll();
         List<SystemNotificationRead> systemReads = systemNotificationReadRepository.findByCustomerId(customerId);
-        List<Long> readSystemIds = systemReads.stream().map(SystemNotificationRead::getSystemNotificationId).toList();
+        Set<Long> readSystemIds = systemReads.stream()
+                .map(SystemNotificationRead::getSystemNotificationId)
+                .collect(Collectors.toSet());
+
+        // Batch load articles — tránh N+1 query
+        List<Long> articleIds = systemNotifs.stream()
+                .map(SystemNotification::getReferenceId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, String> articleSlugMap = articleIds.isEmpty()
+                ? Map.of()
+                : articleRepository.findAllById(articleIds).stream()
+                        .collect(Collectors.toMap(Article::getId, Article::getSlug, (a, b) -> a));
 
         List<NotificationResponse> systemResponses = systemNotifs.stream()
                 .map(sn -> new NotificationResponse(
@@ -186,7 +207,7 @@ public class NotificationService {
                         sn.getCreatedAt(),
                         sn.getReferenceId(),
                         true,
-                        buildUrl(sn.getReferenceId())
+                        buildUrlFromMap(sn.getReferenceId(), articleSlugMap)
                 )).toList();
 
         responses.addAll(systemResponses);
@@ -330,11 +351,10 @@ public class NotificationService {
 
     // ─── Helpers ──────────────────────────────────────────────────────────────────────
 
-    private String buildUrl(Long referenceId) {
+    private String buildUrlFromMap(Long referenceId, Map<Long, String> articleSlugMap) {
         if (referenceId == null) return null;
-        return articleRepository.findById(referenceId)
-                .map(article -> appBaseUrl + "/" + article.getSlug())
-                .orElse(null);
+        String slug = articleSlugMap.get(referenceId);
+        return slug != null ? appBaseUrl + "/" + slug : null;
     }
 
     /** Overload không có referenceId — dùng cho INVOICE / PAYMENT. */
@@ -398,58 +418,94 @@ public class NotificationService {
         }
 
         log.info("[Backfill] Quét {} notification INVOICE/PAYMENT...", all.size());
+
+        // Pre-compute contentMonth cho tất cả notification
+        Map<Long, String> notificationMonthMap = new HashMap<>();
+        for (Notification n : all) {
+            String contentMonth = extractYearMonthFromContent(n.getContent());
+            if (contentMonth == null) {
+                contentMonth = formatYearMonthFromLocalDateTime(n.getCreatedAt());
+            }
+            if (contentMonth != null) {
+                notificationMonthMap.put(n.getId(), contentMonth);
+            }
+        }
+
+        // Batch load invoices theo referenceId hiện tại để validate
+        List<Integer> existingRefIds = all.stream()
+                .filter(n -> n.getReferenceId() != null)
+                .map(n -> n.getReferenceId().intValue())
+                .distinct()
+                .toList();
+        Map<Integer, MonthInvoice> refInvoiceMap = existingRefIds.isEmpty()
+                ? Map.of()
+                : monthInvoiceRepository.findAllById(existingRefIds).stream()
+                        .collect(Collectors.toMap(MonthInvoice::getMonthInvoiceId, inv -> inv, (a, b) -> a));
+
+        // Cache invoices theo (customerId, yearMonth) — tránh query lặp lại
+        Map<String, List<MonthInvoice>> invoiceCache = new HashMap<>();
+        Set<String> combos = new HashSet<>();
+        for (Notification n : all) {
+            String month = notificationMonthMap.get(n.getId());
+            if (month != null && n.getCustomerId() != null) {
+                combos.add(n.getCustomerId() + "_" + month);
+            }
+        }
+        for (String combo : combos) {
+            String[] parts = combo.split("_");
+            Integer custId = Integer.parseInt(parts[0]);
+            String ym = parts[1];
+            invoiceCache.put(combo, monthInvoiceRepository.findByCustomerIdAndYearMonth(custId, ym));
+        }
+
+        // Process notifications using cached data
         int fixed = 0;
+        List<Notification> toSave = new ArrayList<>();
+        List<Notification> toDelete = new ArrayList<>();
 
         for (Notification n : all) {
             try {
-                String contentMonth = extractYearMonthFromContent(n.getContent());
-                if (contentMonth == null) {
-                    contentMonth = formatYearMonthFromLocalDateTime(n.getCreatedAt());
-                }
+                String contentMonth = notificationMonthMap.get(n.getId());
                 if (contentMonth == null) continue;
 
                 // Nếu đã có referenceId → kiểm tra có đúng không
                 if (n.getReferenceId() != null) {
-                    var currentInvoice = monthInvoiceRepository.findById(n.getReferenceId().intValue());
-                    if (currentInvoice.isPresent()) {
-                        var inv = currentInvoice.get();
-                        boolean monthMatch = contentMonth.equals(inv.getYearMonth());
-                        // PAYMENT notification phải trỏ tới invoice ĐÃ THANH TOÁN
+                    MonthInvoice currentInvoice = refInvoiceMap.get(n.getReferenceId().intValue());
+                    if (currentInvoice != null) {
+                        boolean monthMatch = contentMonth.equals(currentInvoice.getYearMonth());
                         boolean statusMatch = !"PAYMENT".equals(n.getType())
-                                || Integer.valueOf(2).equals(inv.getPaymentStatus());
-                        if (monthMatch && statusMatch) {
-                            continue; // Đúng rồi, bỏ qua
-                        }
+                                || Integer.valueOf(2).equals(currentInvoice.getPaymentStatus());
+                        if (monthMatch && statusMatch) continue;
                         if (!monthMatch) {
                             log.warn("[Backfill] notificationId={} referenceId={} sai tháng (content={}, invoice={})",
-                                    n.getId(), n.getReferenceId(), contentMonth, inv.getYearMonth());
+                                    n.getId(), n.getReferenceId(), contentMonth, currentInvoice.getYearMonth());
                         }
                         if (!statusMatch) {
                             log.warn("[Backfill] notificationId={} PAYMENT referenceId={} trỏ invoice chưa thanh toán (PaymentStatus={})",
-                                    n.getId(), n.getReferenceId(), inv.getPaymentStatus());
+                                    n.getId(), n.getReferenceId(), currentInvoice.getPaymentStatus());
                         }
                     }
                 }
 
-                // Tìm invoice đúng theo content month
-                List<vn.hoidanit.springrestwithai.qlkh.entity.MonthInvoice> invoices;
+                // Tìm invoice đúng từ cache
+                String key = n.getCustomerId() + "_" + contentMonth;
+                List<MonthInvoice> invoices = invoiceCache.get(key);
                 if ("PAYMENT".equals(n.getType())) {
-                    invoices = monthInvoiceRepository.findPaidByCustomerIdAndYearMonth(
-                            n.getCustomerId(), contentMonth);
-                } else {
-                    invoices = monthInvoiceRepository.findByCustomerIdAndYearMonth(
-                            n.getCustomerId(), contentMonth);
+                    invoices = invoices != null
+                            ? invoices.stream()
+                                    .filter(inv -> Integer.valueOf(2).equals(inv.getPaymentStatus()))
+                                    .toList()
+                            : List.of();
                 }
 
-                if (invoices.size() >= 1) {
+                if (invoices != null && !invoices.isEmpty()) {
                     n.setReferenceId(Long.valueOf(invoices.get(0).getMonthInvoiceId()));
-                    notificationRepository.save(n);
+                    toSave.add(n);
                     fixed++;
                     log.info("[Backfill] FIXED notificationId={} → monthInvoiceId={}",
                             n.getId(), invoices.get(0).getMonthInvoiceId());
                 } else if ("PAYMENT".equals(n.getType())) {
-                    // PAYMENT notification nhưng không có invoice đã thanh toán → xóa notification
-                    notificationRepository.delete(n);
+                    toDelete.add(n);
                     fixed++;
                     log.warn("[Backfill] DELETED notificationId={} type=PAYMENT — không có hóa đơn đã thanh toán cho customerId={} month={}",
                             n.getId(), n.getCustomerId(), contentMonth);
@@ -460,6 +516,14 @@ public class NotificationService {
             } catch (Exception e) {
                 log.error("[Backfill] Lỗi notificationId={}: {}", n.getId(), e.getMessage());
             }
+        }
+
+        // Batch save/delete
+        if (!toSave.isEmpty()) {
+            notificationRepository.saveAll(toSave);
+        }
+        if (!toDelete.isEmpty()) {
+            notificationRepository.deleteAll(toDelete);
         }
 
         log.info("[Backfill] Hoàn tất: sửa {}/{} notification.", fixed, all.size());
