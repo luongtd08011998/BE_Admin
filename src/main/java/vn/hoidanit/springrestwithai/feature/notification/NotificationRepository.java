@@ -27,4 +27,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     @Query("SELECT n FROM Notification n WHERE n.type IN :types AND n.referenceId IS NULL")
     List<Notification> findByTypeInAndReferenceIdNull(@Param("types") List<String> types);
+
+    @Query("SELECT n FROM Notification n WHERE n.type IN :types")
+    List<Notification> findByTypeIn(@Param("types") List<String> types);
 }
