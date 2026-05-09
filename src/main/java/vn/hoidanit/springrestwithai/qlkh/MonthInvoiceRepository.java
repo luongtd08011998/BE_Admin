@@ -105,4 +105,24 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
 
     @Query("SELECT m FROM MonthInvoice m WHERE m.customerId = :customerId AND m.yearMonth = :yearMonth AND m.paymentStatus = 2")
     List<MonthInvoice> findPaidByCustomerIdAndYearMonth(@Param("customerId") Integer customerId, @Param("yearMonth") String yearMonth);
+
+    @Query("""
+            SELECT NEW vn.hoidanit.springrestwithai.qlkh.dto.AdminInvoiceResponse(
+                m.monthInvoiceId,
+                c.digiCode, c.name, 
+                (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0)), 
+                m.yearMonth, 
+                m.fkey,
+                m.paymentStatus) 
+            FROM MonthInvoice m, Customer c 
+            WHERE m.customerId = c.customerId
+            AND (m.fkey IS NOT NULL AND m.fkey <> '')
+            AND (:yearMonth IS NULL OR :yearMonth = '' OR m.yearMonth = :yearMonth)
+            AND (:paymentStatus IS NULL OR m.paymentStatus = :paymentStatus)
+            ORDER BY m.yearMonth DESC, m.monthInvoiceId DESC
+            """)
+    Page<vn.hoidanit.springrestwithai.qlkh.dto.AdminInvoiceResponse> findAdminInvoices(
+            @Param("yearMonth") String yearMonth, 
+            @Param("paymentStatus") Integer paymentStatus,
+            Pageable pageable);
 }
