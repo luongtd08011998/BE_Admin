@@ -119,10 +119,14 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
             AND (m.fkey IS NOT NULL AND m.fkey <> '')
             AND (:yearMonth IS NULL OR :yearMonth = '' OR m.yearMonth = :yearMonth)
             AND (:paymentStatus IS NULL OR m.paymentStatus = :paymentStatus)
+            AND (:customerName IS NULL OR :customerName = '' OR LOWER(c.name) LIKE LOWER(CONCAT('%', :customerName, '%')))
+            AND (:digiCode IS NULL OR :digiCode = '' OR LOWER(c.digiCode) LIKE LOWER(CONCAT('%', :digiCode, '%')))
             ORDER BY m.yearMonth DESC, m.monthInvoiceId DESC
             """)
     Page<vn.hoidanit.springrestwithai.qlkh.dto.AdminInvoiceResponse> findAdminInvoices(
             @Param("yearMonth") String yearMonth, 
             @Param("paymentStatus") Integer paymentStatus,
+            @Param("customerName") String customerName,
+            @Param("digiCode") String digiCode,
             Pageable pageable);
 }

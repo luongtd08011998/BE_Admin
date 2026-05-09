@@ -52,8 +52,10 @@ public class InvoiceAdminService {
         }
 
         Integer paymentStatus = (filter != null) ? filter.getPaymentStatus() : null;
+        String customerName = (filter != null) ? filter.getCustomerName() : null;
+        String digiCode = (filter != null) ? filter.getDigiCode() : null;
 
-        Page<AdminInvoiceResponse> page = monthInvoiceRepository.findAdminInvoices(yearMonth, paymentStatus, pageable);
+        Page<AdminInvoiceResponse> page = monthInvoiceRepository.findAdminInvoices(yearMonth, paymentStatus, customerName, digiCode, pageable);
 
         // Gọi VNPT song song cho tất cả hóa đơn trong trang hiện tại
         List<AdminInvoiceResponse> content = page.getContent();
