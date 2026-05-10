@@ -15,6 +15,19 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     List<Notification> findByCustomerIdOrderByCreatedAtDesc(Integer customerId);
 
+    List<Notification> findByCustomerIdAndTypeOrderByCreatedAtDesc(Integer customerId, String type);
+
+    List<Notification> findByCustomerIdAndTypeNotOrderByCreatedAtDesc(Integer customerId, String type);
+
+    @Query("SELECT COUNT(n) FROM Notification n WHERE n.customerId = :customerId AND n.isRead = false")
+    long countUnreadByCustomerId(@Param("customerId") Integer customerId);
+
+    @Query("SELECT COUNT(n) FROM Notification n WHERE n.customerId = :customerId AND n.isRead = false AND n.type = :type")
+    long countUnreadByCustomerIdAndType(@Param("customerId") Integer customerId, @Param("type") String type);
+
+    @Query("SELECT COUNT(n) FROM Notification n WHERE n.customerId = :customerId AND n.isRead = false AND n.type != :excludeType")
+    long countUnreadByCustomerIdAndTypeNot(@Param("customerId") Integer customerId, @Param("excludeType") String excludeType);
+
     @Modifying
     @Transactional
     @Query("UPDATE Notification n SET n.isRead = true WHERE n.customerId = :customerId AND n.id IN :ids")

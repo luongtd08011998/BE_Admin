@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vn.hoidanit.springrestwithai.dto.ApiResponse;
 import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
@@ -44,11 +45,27 @@ public class NotificationController {
      */
     @GetMapping
     public ResponseEntity<ApiResponse<List<NotificationResponse>>> getNotifications(
-            @RequestHeader("Authorization") String authHeader) {
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String excludeType) {
 
         Integer customerId = extractCustomerId(authHeader);
-        List<NotificationResponse> response = notificationService.getNotifications(customerId);
+        List<NotificationResponse> response = notificationService.getNotifications(customerId, type, excludeType);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách thông báo thành công", response));
+    }
+
+    /**
+     * Lấy số lượng thông báo chưa đọc của khách hàng.
+     */
+    @GetMapping("/unread-count")
+    public ResponseEntity<ApiResponse<Long>> getUnreadCount(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String excludeType) {
+
+        Integer customerId = extractCustomerId(authHeader);
+        long count = notificationService.getUnreadCount(customerId, type, excludeType);
+        return ResponseEntity.ok(ApiResponse.success("Lấy số lượng chưa đọc thành công", count));
     }
 
     /**
