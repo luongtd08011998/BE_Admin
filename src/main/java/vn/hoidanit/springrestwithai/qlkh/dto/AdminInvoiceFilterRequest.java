@@ -5,15 +5,17 @@ public class AdminInvoiceFilterRequest {
     private Integer paymentStatus;
     private String customerName;
     private String digiCode;
+    private Integer remindStatus;
 
     public AdminInvoiceFilterRequest() {
     }
 
-    public AdminInvoiceFilterRequest(String yearMonth, Integer paymentStatus, String customerName, String digiCode) {
+    public AdminInvoiceFilterRequest(String yearMonth, Integer paymentStatus, String customerName, String digiCode, Integer remindStatus) {
         this.yearMonth = yearMonth;
         this.paymentStatus = paymentStatus;
         this.customerName = customerName;
         this.digiCode = digiCode;
+        this.remindStatus = remindStatus;
     }
 
     public String getYearMonth() {
@@ -46,5 +48,13 @@ public class AdminInvoiceFilterRequest {
 
     public void setDigiCode(String digiCode) {
         this.digiCode = digiCode;
+    }
+
+    public Integer getRemindStatus() {
+        return remindStatus;
+    }
+
+    public void setRemindStatus(Integer remindStatus) {
+        this.remindStatus = remindStatus;
     }
 }

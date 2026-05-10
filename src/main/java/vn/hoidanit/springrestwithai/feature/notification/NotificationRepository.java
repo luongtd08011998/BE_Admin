@@ -30,4 +30,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     @Query("SELECT n FROM Notification n WHERE n.type IN :types")
     List<Notification> findByTypeIn(@Param("types") List<String> types);
+
+    @Query("SELECT DISTINCT n.referenceId FROM Notification n WHERE n.type = 'DEBT_REMINDER' AND n.referenceId IS NOT NULL")
+    List<Long> findAllRemindedInvoiceIds();
 }

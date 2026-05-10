@@ -19,6 +19,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import vn.hoidanit.springrestwithai.qlkh.dto.DebtReminderResponse;
+import vn.hoidanit.springrestwithai.qlkh.entity.MonthInvoice;
+
 @Service
 public class InvoiceAdminService {
 
@@ -27,16 +30,21 @@ public class InvoiceAdminService {
     private final MonthInvoiceRepository monthInvoiceRepository;
     private final VnptPortalInvoiceClient vnptPortalInvoiceClient;
     private final VnptInvoiceHtmlParser vnptInvoiceHtmlParser;
+    private final NotificationService notificationService;
 
     // Thread pool dùng riêng cho các lần gọi VNPT song song
     private final ExecutorService vnptExecutor = Executors.newFixedThreadPool(10);
+    // Thread pool dùng cho gửi notification song song
+    private final ExecutorService notificationExecutor = Executors.newFixedThreadPool(10);
 
     public InvoiceAdminService(MonthInvoiceRepository monthInvoiceRepository,
                                VnptPortalInvoiceClient vnptPortalInvoiceClient,
-                               VnptInvoiceHtmlParser vnptInvoiceHtmlParser) {
+                               VnptInvoiceHtmlParser vnptInvoiceHtmlParser,
+                               NotificationService notificationService) {
         this.monthInvoiceRepository = monthInvoiceRepository;
         this.vnptPortalInvoiceClient = vnptPortalInvoiceClient;
         this.vnptInvoiceHtmlParser = vnptInvoiceHtmlParser;
+        this.notificationService = notificationService;
     }
 
     public ResultPaginationDTO getAll(AdminInvoiceFilterRequest filter, Pageable pageable) {
@@ -54,11 +62,32 @@ public class InvoiceAdminService {
         Integer paymentStatus = (filter != null) ? filter.getPaymentStatus() : null;
         String customerName = (filter != null) ? filter.getCustomerName() : null;
         String digiCode = (filter != null) ? filter.getDigiCode() : null;
+        Integer remindStatus = (filter != null) ? filter.getRemindStatus() : null;
 
-        Page<AdminInvoiceResponse> page = monthInvoiceRepository.findAdminInvoices(yearMonth, paymentStatus, customerName, digiCode, pageable);
+        // Fetch all reminded invoice IDs from Notification table
+        java.util.List<Long> remindedLongIds = notificationService.findAllRemindedInvoiceIds();
+        java.util.List<Integer> remindedIds = remindedLongIds.stream().map(Long::intValue).toList();
+
+        // If list is empty, avoid SQL syntax errors in IN clause
+        if (remindedIds.isEmpty()) {
+            remindedIds = java.util.List.of(-1);
+        }
+
+        Page<AdminInvoiceResponse> page = monthInvoiceRepository.findAdminInvoices(yearMonth, paymentStatus, customerName, digiCode, remindStatus, remindedIds, pageable);
 
         // Gọi VNPT song song cho tất cả hóa đơn trong trang hiện tại
         List<AdminInvoiceResponse> content = page.getContent();
+        
+        // Map isReminded boolean
+        java.util.Set<Integer> remindedSet = new java.util.HashSet<>(remindedIds);
+        for (AdminInvoiceResponse res : content) {
+            if (remindedSet.contains(res.getId())) {
+                res.setIsReminded(true);
+            } else {
+                res.setIsReminded(false);
+            }
+        }
+
         fetchInvoiceNosParallel(content);
 
         return ResultPaginationDTO.fromPage(page);
@@ -99,6 +128,53 @@ public class InvoiceAdminService {
         } catch (Exception e) {
             log.error("Timeout hoặc lỗi khi gọi VNPT song song: {}", e.getMessage());
         }
+    }
+
+    public DebtReminderResponse sendDebtReminder(String yearMonth, Integer monthInvoiceId) {
+        if (yearMonth == null || yearMonth.isBlank()) {
+            throw new IllegalArgumentException("yearMonth is required");
+        }
+
+        List<vn.hoidanit.springrestwithai.qlkh.dto.InvoiceInfoDTO> unpaidInvoices = monthInvoiceRepository.findUnpaidInvoiceDTOsByYearMonth(yearMonth.trim());
+        
+        if (monthInvoiceId != null) {
+            unpaidInvoices = unpaidInvoices.stream()
+                .filter(inv -> inv.getMonthInvoiceId().equals(monthInvoiceId))
+                .toList();
+        }
+
+        if (unpaidInvoices == null || unpaidInvoices.isEmpty()) {
+            return new DebtReminderResponse(0, 0);
+        }
+
+        java.util.concurrent.atomic.AtomicInteger sentCount = new java.util.concurrent.atomic.AtomicInteger(0);
+
+        List<CompletableFuture<Void>> futures = unpaidInvoices.stream()
+                .filter(inv -> inv.getCustomerId() != null)
+                .map(inv -> CompletableFuture.runAsync(() -> {
+                    try {
+                        notificationService.sendDebtReminderNotification(
+                                inv.getCustomerId(),
+                                inv.getMonthInvoiceId(),
+                                inv.getYearMonth(),
+                                inv.getDigiCode(),
+                                inv.getCustomerName(),
+                                inv.getAmount());
+                        sentCount.incrementAndGet();
+                    } catch (Exception e) {
+                        log.error("Lỗi khi gửi thông báo nhắc nợ cho invoiceId={}: {}", inv.getMonthInvoiceId(), e.getMessage());
+                    }
+                }, notificationExecutor))
+                .toList();
+
+        try {
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                    .get(30, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.error("Timeout hoặc lỗi khi gửi thông báo nhắc nợ song song: {}", e.getMessage());
+        }
+
+        return new DebtReminderResponse(sentCount.get(), unpaidInvoices.size() - sentCount.get());
     }
 
     private static String normalizeVnptFkey(String rawFkey) {

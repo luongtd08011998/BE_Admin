@@ -10,6 +10,7 @@ public class AdminInvoiceResponse {
     private String yearMonth;
     private String invoiceNo;
     private Integer paymentStatus;
+    private Boolean isReminded;
 
     @JsonIgnore
     private String fkey;
@@ -23,6 +24,7 @@ public class AdminInvoiceResponse {
         this.fkey = fkey;
         this.paymentStatus = paymentStatus;
         this.invoiceNo = ""; // will be populated later
+        this.isReminded = false;
     }
 
     public Integer getId() {
@@ -87,5 +89,13 @@ public class AdminInvoiceResponse {
 
     public void setPaymentStatus(Integer paymentStatus) {
         this.paymentStatus = paymentStatus;
+    }
+
+    public Boolean getIsReminded() {
+        return isReminded;
+    }
+
+    public void setIsReminded(Boolean isReminded) {
+        this.isReminded = isReminded;
     }
 }

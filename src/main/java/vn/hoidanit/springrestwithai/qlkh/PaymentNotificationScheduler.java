@@ -9,7 +9,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import vn.hoidanit.springrestwithai.feature.notification.NotifiedPaymentRepository;
-import vn.hoidanit.springrestwithai.qlkh.entity.MonthInvoice;
+import vn.hoidanit.springrestwithai.qlkh.dto.InvoiceInfoDTO;
 
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
@@ -67,13 +67,13 @@ public class PaymentNotificationScheduler {
         }
 
         int pageNum = 0;
-        int pageSize = 500; // Chunk size
+        int pageSize = 500;
         AtomicInteger sentCount = new AtomicInteger(0);
 
         while (true) {
             Pageable pageable = PageRequest.of(pageNum, pageSize);
-            Page<MonthInvoice> invoicePage = monthInvoiceRepository
-                    .findRecentPaidInvoicesExcluding(fromYearMonth, alreadyNotifiedIds, pageable);
+            Page<InvoiceInfoDTO> invoicePage = monthInvoiceRepository
+                    .findPaidInvoiceInfoExcluding(fromYearMonth, alreadyNotifiedIds, pageable);
 
             if (invoicePage.isEmpty()) {
                 if (pageNum == 0) {
@@ -82,14 +82,17 @@ public class PaymentNotificationScheduler {
                 break;
             }
 
-            List<MonthInvoice> paidInvoices = invoicePage.getContent();
+            List<InvoiceInfoDTO> paidInvoices = invoicePage.getContent();
 
             paidInvoices.forEach(invoice -> {
                 try {
                     boolean sent = notificationService.sendAndMarkPaymentNotification(
                             invoice.getMonthInvoiceId(),
                             invoice.getCustomerId(),
-                            invoice.getYearMonth()
+                            invoice.getYearMonth(),
+                            invoice.getDigiCode(),
+                            invoice.getCustomerName(),
+                            invoice.getAmount()
                     );
                     if (sent) sentCount.incrementAndGet();
                 } catch (Exception e) {
