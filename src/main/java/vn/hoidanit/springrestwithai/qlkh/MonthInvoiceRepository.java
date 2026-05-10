@@ -64,12 +64,43 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
      * Lấy danh sách hóa đơn có tổng tiền > 0 được tạo vào ngày {@code datePrefix}.
      * {@code datePrefix} thường là "yyyy-MM-dd" hoặc "yyyyMMdd" tùy format lưu trong DB.
      */
+    /**
+     * Lấy danh sách hóa đơn MỚI kèm thông tin KH — dành cho InvoiceNotificationScheduler.
+     * JOIN Customer để lấy tên + digiCode + amount trong 1 câu query, tránh N+1.
+     */
     @Query("""
-            SELECT m FROM MonthInvoice m
+            SELECT new vn.hoidanit.springrestwithai.qlkh.dto.InvoiceInfoDTO(
+                m.customerId, m.monthInvoiceId, m.yearMonth, c.digiCode, c.name,
+                (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0))
+            )
+            FROM MonthInvoice m
+            JOIN Customer c ON m.customerId = c.customerId
             WHERE m.createdDate LIKE CONCAT(:datePrefix, '%')
             AND (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0)) <> 0
             """)
-    Page<MonthInvoice> findByCreatedDatePrefix(@Param("datePrefix") String datePrefix, Pageable pageable);
+    Page<vn.hoidanit.springrestwithai.qlkh.dto.InvoiceInfoDTO> findInvoiceInfoByCreatedDatePrefix(
+            @Param("datePrefix") String datePrefix, Pageable pageable);
+
+    /**
+     * Lấy hóa đơn đã thanh toán kèm thông tin KH — dành cho PaymentNotificationScheduler.
+     * LOẠI TRỪ những invoice đã được thông báo.
+     */
+    @Query("""
+            SELECT new vn.hoidanit.springrestwithai.qlkh.dto.InvoiceInfoDTO(
+                m.customerId, m.monthInvoiceId, m.yearMonth, c.digiCode, c.name,
+                (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0))
+            )
+            FROM MonthInvoice m
+            JOIN Customer c ON m.customerId = c.customerId
+            WHERE m.paymentStatus = 2
+            AND m.yearMonth >= :fromYearMonth
+            AND (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0)) <> 0
+            AND m.monthInvoiceId NOT IN :excludeIds
+            """)
+    Page<vn.hoidanit.springrestwithai.qlkh.dto.InvoiceInfoDTO> findPaidInvoiceInfoExcluding(
+            @Param("fromYearMonth") String fromYearMonth,
+            @Param("excludeIds") List<Integer> excludeIds,
+            Pageable pageable);
 
     /**
      * Lấy hóa đơn có trạng thái ĐÃ THANH TOÁN (paymentStatus = 2) trong khoảng từ {@code fromYearMonth} trở về sau.
@@ -84,9 +115,7 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
     Page<MonthInvoice> findRecentPaidInvoices(@Param("fromYearMonth") String fromYearMonth, Pageable pageable);
 
     /**
-     * Lấy hóa đơn đã thanh toán nhưng LOẠI TRỪ những invoice đã được thông báo.
-     * {@code excludeIds} là danh sách monthInvoiceId lấy từ bảng notified_payment (DB primary).
-     * Giảm số record load mỗi lần cron chạy từ ~24.000 xuống chỉ còn vài chục.
+     * Lấy hóa đơn đã thanh toán nhưng LOẠI TRỪ những invoice đã được thông báo (Entity version - giữ lại để tương thích).
      */
     @Query("""
             SELECT m FROM MonthInvoice m
@@ -105,4 +134,45 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
 
     @Query("SELECT m FROM MonthInvoice m WHERE m.customerId = :customerId AND m.yearMonth = :yearMonth AND m.paymentStatus = 2")
     List<MonthInvoice> findPaidByCustomerIdAndYearMonth(@Param("customerId") Integer customerId, @Param("yearMonth") String yearMonth);
+
+    @Query("""
+            SELECT NEW vn.hoidanit.springrestwithai.qlkh.dto.AdminInvoiceResponse(
+                m.monthInvoiceId,
+                c.digiCode, c.name, 
+                (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0)), 
+                m.yearMonth, 
+                m.fkey,
+                m.paymentStatus) 
+            FROM MonthInvoice m, Customer c 
+            WHERE m.customerId = c.customerId
+            AND (m.fkey IS NOT NULL AND m.fkey <> '')
+            AND (:yearMonth IS NULL OR :yearMonth = '' OR m.yearMonth = :yearMonth)
+            AND (:paymentStatus IS NULL OR m.paymentStatus = :paymentStatus)
+            AND (:customerName IS NULL OR :customerName = '' OR LOWER(c.name) LIKE LOWER(CONCAT('%', :customerName, '%')))
+            AND (:digiCode IS NULL OR :digiCode = '' OR LOWER(c.digiCode) LIKE LOWER(CONCAT('%', :digiCode, '%')))
+            AND (:remindStatus IS NULL 
+                 OR (:remindStatus = 1 AND m.monthInvoiceId IN :remindedIds) 
+                 OR (:remindStatus = 0 AND m.monthInvoiceId NOT IN :remindedIds))
+            ORDER BY m.yearMonth DESC, m.monthInvoiceId DESC
+            """)
+    Page<vn.hoidanit.springrestwithai.qlkh.dto.AdminInvoiceResponse> findAdminInvoices(
+            @Param("yearMonth") String yearMonth, 
+            @Param("paymentStatus") Integer paymentStatus,
+            @Param("customerName") String customerName,
+            @Param("digiCode") String digiCode,
+            @Param("remindStatus") Integer remindStatus,
+            @Param("remindedIds") java.util.List<Integer> remindedIds,
+            Pageable pageable);
+
+    @Query("""
+            SELECT new vn.hoidanit.springrestwithai.qlkh.dto.InvoiceInfoDTO(
+                m.customerId, m.monthInvoiceId, m.yearMonth, c.digiCode, c.name,
+                (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0))
+            )
+            FROM MonthInvoice m 
+            JOIN Customer c ON m.customerId = c.customerId
+            WHERE m.yearMonth = :yearMonth 
+            AND m.paymentStatus = 1
+            """)
+    java.util.List<vn.hoidanit.springrestwithai.qlkh.dto.InvoiceInfoDTO> findUnpaidInvoiceDTOsByYearMonth(@Param("yearMonth") String yearMonth);
 }

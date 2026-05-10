@@ -132,6 +132,21 @@ public class NotificationService {
     }
 
     /**
+     * Gọi khi Admin gửi nhắc nợ: lưu notification + push FCM.
+     */
+    @Transactional("primaryTransactionManager")
+    public void sendDebtReminderNotification(Integer customerId, Integer monthInvoiceId, String yearMonth, String digiCode, String customerName, Double amount) {
+        String formattedYm = formatYearMonth(yearMonth);
+        java.text.NumberFormat currencyFormatter = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("vi", "VN"));
+        String formattedAmount = currencyFormatter.format(amount != null ? amount : 0);
+        
+        String title = "Nhắc nợ hóa đơn";
+        String content = String.format("Kính gửi %s (Mã KH: %s), hóa đơn tiền nước tháng %s với số tiền %s của bạn chưa được thanh toán. Vui lòng thanh toán đúng hạn.", 
+                                       customerName, digiCode, formattedYm, formattedAmount);
+        saveAndPush(customerId, title, content, "DEBT_REMINDER", Long.valueOf(monthInvoiceId));
+    }
+
+    /**
      * Gọi khi Admin đổi trạng thái phản ánh — thông báo đến KH ngay lập tức.
      */
     @Transactional("primaryTransactionManager")
@@ -254,6 +269,10 @@ public class NotificationService {
         }
     }
 
+    public List<Long> findAllRemindedInvoiceIds() {
+        return notificationRepository.findAllRemindedInvoiceIds();
+    }
+
     /**
      * Gửi thông báo hệ thống (FCM Topic)
      */
@@ -286,19 +305,22 @@ public class NotificationService {
      * @return true nếu đã gửi thành công, false nếu đã gửi trước đó (bỏ qua)
      */
     @Transactional("primaryTransactionManager")
-    public boolean sendAndMarkInvoiceNotification(Integer monthInvoiceId, Integer customerId, String yearMonth) {
+    public boolean sendAndMarkInvoiceNotification(Integer monthInvoiceId, Integer customerId, String yearMonth, String digiCode, String customerName, Double amount) {
         // Kiểm tra đã gửi thông báo cho hóa đơn này chưa
         if (notifiedInvoiceRepository.existsByMonthInvoiceId(monthInvoiceId)) {
             log.debug("Invoice {} already notified — skipping.", monthInvoiceId);
             return false;
         }
 
-        // Gửi push + lưu vào bảng notification
-        String title = "Hóa đơn mới tháng " + formatYearMonth(yearMonth);
-        String content = "Hóa đơn tiền nước tháng " + formatYearMonth(yearMonth)
-                + " của bạn đã có. Vui lòng kiểm tra và thanh toán đúng hạn.";
-        saveAndPush(customerId, title, content, "INVOICE", Long.valueOf(monthInvoiceId));
+        // Format số tiền theo chuẩn VND
+        java.text.NumberFormat currencyFormatter = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("vi", "VN"));
+        String formattedAmount = currencyFormatter.format(amount != null ? amount : 0);
+        String formattedYm = formatYearMonth(yearMonth);
 
+        String title = "Thông báo tiền nước kỳ " + formattedYm;
+        String content = String.format("Thông báo tiền nước kỳ %s của KH %s, Mã KH %s là %s.",
+                formattedYm, customerName, digiCode, formattedAmount);
+        saveAndPush(customerId, title, content, "INVOICE", Long.valueOf(monthInvoiceId));
 
         // Đánh dấu đã gửi
         NotifiedInvoice mark = new NotifiedInvoice();
@@ -319,17 +341,21 @@ public class NotificationService {
      * @return true nếu đã gửi thành công, false nếu đã gửi trước đó (bỏ qua)
      */
     @Transactional("primaryTransactionManager")
-    public boolean sendAndMarkPaymentNotification(Integer monthInvoiceId, Integer customerId, String yearMonth) {
+    public boolean sendAndMarkPaymentNotification(Integer monthInvoiceId, Integer customerId, String yearMonth, String digiCode, String customerName, Double amount) {
         // Kiểm tra đã gửi thông báo thanh toán cho hóa đơn này chưa
         if (notifiedPaymentRepository.existsByMonthInvoiceId(monthInvoiceId)) {
             log.debug("Payment invoice {} already notified — skipping.", monthInvoiceId);
             return false;
         }
 
-        // Gửi push + lưu vào bảng notification
+        // Format số tiền theo chuẩn VND
+        java.text.NumberFormat currencyFormatter = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("vi", "VN"));
+        String formattedAmount = currencyFormatter.format(amount != null ? amount : 0);
+        String formattedYm = formatYearMonth(yearMonth);
+
         String title = "Thanh toán thành công";
-        String content = "Hóa đơn tiền nước tháng " + formatYearMonth(yearMonth)
-                + " đã được thanh toán thành công. Cảm ơn bạn!";
+        String content = String.format("Cảm ơn khách hàng %s, Mã KH %s đã thanh toán hóa đơn tháng %s với số tiền %s.",
+                customerName, digiCode, formattedYm, formattedAmount);
         saveAndPush(customerId, title, content, "PAYMENT", Long.valueOf(monthInvoiceId));
 
         // Đánh dấu đã gửi

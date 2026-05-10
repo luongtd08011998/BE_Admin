@@ -8,7 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import vn.hoidanit.springrestwithai.qlkh.entity.MonthInvoice;
+import vn.hoidanit.springrestwithai.qlkh.dto.InvoiceInfoDTO;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Cron Job quét hóa đơn mới và gửi Push Notification tự động.
  *
- * <p>Chạy mỗi ngày lúc 08:00 sáng (cấu hình qua {@code app.invoice-notify.cron}).
+ * <p>Chạy mỗi 2 phút (cấu hình qua {@code app.invoice-notify.cron}).
  * Logic:
  * <ol>
  *   <li>Lấy danh sách hóa đơn được tạo trong ngày hôm nay từ DB qlkh.</li>
@@ -66,13 +66,13 @@ public class InvoiceNotificationScheduler {
         log.debug("[InvoiceNotify] Bắt đầu quét hóa đơn với datePrefix='{}'", queryDate);
 
         int pageNum = 0;
-        int pageSize = 500; // Chunk size
+        int pageSize = 500;
         AtomicInteger sentCount = new AtomicInteger(0);
         AtomicInteger skipCount = new AtomicInteger(0);
 
         while (true) {
             Pageable pageable = PageRequest.of(pageNum, pageSize);
-            Page<MonthInvoice> invoicePage = monthInvoiceRepository.findByCreatedDatePrefix(queryDate, pageable);
+            Page<InvoiceInfoDTO> invoicePage = monthInvoiceRepository.findInvoiceInfoByCreatedDatePrefix(queryDate, pageable);
 
             if (invoicePage.isEmpty()) {
                 if (pageNum == 0) {
@@ -81,11 +81,11 @@ public class InvoiceNotificationScheduler {
                 break;
             }
 
-            List<MonthInvoice> invoices = invoicePage.getContent();
+            List<InvoiceInfoDTO> invoices = invoicePage.getContent();
 
             // Tối ưu N+1: Lấy danh sách tất cả ID hóa đơn trong cụm
-            List<Integer> allIds = invoices.stream().map(MonthInvoice::getMonthInvoiceId).toList();
-            
+            List<Integer> allIds = invoices.stream().map(InvoiceInfoDTO::getMonthInvoiceId).toList();
+
             // Lấy danh sách các ID đã được thông báo từ database primary
             List<Integer> notifiedIds = notifiedInvoiceRepository.findNotifiedInvoiceIds(allIds);
             java.util.Set<Integer> notifiedSet = new java.util.HashSet<>(notifiedIds);
@@ -102,7 +102,10 @@ public class InvoiceNotificationScheduler {
                     boolean sent = notificationService.sendAndMarkInvoiceNotification(
                             invoice.getMonthInvoiceId(),
                             invoice.getCustomerId(),
-                            invoice.getYearMonth()
+                            invoice.getYearMonth(),
+                            invoice.getDigiCode(),
+                            invoice.getCustomerName(),
+                            invoice.getAmount()
                     );
                     if (sent) sentCount.incrementAndGet();
                 } catch (Exception e) {
