@@ -176,9 +176,17 @@ public class NotificationService {
 
     // ─── Notification CRUD ──────────────────────────────────────────────────
 
-    public List<NotificationResponse> getNotifications(Integer customerId) {
+    public List<NotificationResponse> getNotifications(Integer customerId, String type, String excludeType) {
         // 1. Lấy thông báo cá nhân
-        List<Notification> personalNotifs = notificationRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
+        List<Notification> personalNotifs;
+        if (type != null && !type.isBlank()) {
+            personalNotifs = notificationRepository.findByCustomerIdAndTypeOrderByCreatedAtDesc(customerId, type);
+        } else if (excludeType != null && !excludeType.isBlank()) {
+            personalNotifs = notificationRepository.findByCustomerIdAndTypeNotOrderByCreatedAtDesc(customerId, excludeType);
+        } else {
+            personalNotifs = notificationRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
+        }
+
         List<NotificationResponse> responses = new ArrayList<>(personalNotifs.stream()
                 .map(n -> new NotificationResponse(
                         n.getId(),
@@ -194,7 +202,8 @@ public class NotificationService {
                 .toList());
 
         // 2. Lấy thông báo hệ thống
-        List<SystemNotification> systemNotifs = systemNotificationRepository.findAll();
+        if (type == null || type.isBlank() || excludeType != null) {
+            List<SystemNotification> systemNotifs = systemNotificationRepository.findAll();
         List<SystemNotificationRead> systemReads = systemNotificationReadRepository.findByCustomerId(customerId);
         Set<Long> readSystemIds = systemReads.stream()
                 .map(SystemNotificationRead::getSystemNotificationId)
@@ -226,11 +235,22 @@ public class NotificationService {
                         buildUrlFromMap(sn.getReferenceId(), articleSlugMap)
                 )).toList();
 
-        responses.addAll(systemResponses);
+            responses.addAll(systemResponses);
+        }
 
         // 3. Sort tất cả theo thời gian giảm dần
         responses.sort((n1, n2) -> n2.createdAt().compareTo(n1.createdAt()));
         return responses;
+    }
+
+    public long getUnreadCount(Integer customerId, String type, String excludeType) {
+        if (type != null && !type.isBlank()) {
+            return notificationRepository.countUnreadByCustomerIdAndType(customerId, type);
+        } else if (excludeType != null && !excludeType.isBlank()) {
+            return notificationRepository.countUnreadByCustomerIdAndTypeNot(customerId, excludeType);
+        } else {
+            return notificationRepository.countUnreadByCustomerId(customerId);
+        }
     }
 
     @Transactional("primaryTransactionManager")
