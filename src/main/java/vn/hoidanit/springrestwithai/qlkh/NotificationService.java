@@ -57,6 +57,7 @@ public class NotificationService {
     private final SystemNotificationRepository systemNotificationRepository;
     private final SystemNotificationReadRepository systemNotificationReadRepository;
     private final FirebaseService firebaseService;
+    private final TokenCleanupService tokenCleanupService;
     private final ArticleRepository articleRepository;
     private final MonthInvoiceRepository monthInvoiceRepository;
 
@@ -67,6 +68,7 @@ public class NotificationService {
                                SystemNotificationRepository systemNotificationRepository,
                                SystemNotificationReadRepository systemNotificationReadRepository,
                                FirebaseService firebaseService,
+                               TokenCleanupService tokenCleanupService,
                                ArticleRepository articleRepository,
                                MonthInvoiceRepository monthInvoiceRepository) {
         this.customerDeviceRepository = customerDeviceRepository;
@@ -76,6 +78,7 @@ public class NotificationService {
         this.systemNotificationRepository = systemNotificationRepository;
         this.systemNotificationReadRepository = systemNotificationReadRepository;
         this.firebaseService = firebaseService;
+        this.tokenCleanupService = tokenCleanupService;
         this.articleRepository = articleRepository;
         this.monthInvoiceRepository = monthInvoiceRepository;
     }
@@ -315,8 +318,8 @@ public class NotificationService {
 
         firebaseService.sendToTopicAsync("general_news", title, content, data)
                 .thenAccept(result -> {
-                    if (!result.invalidTokens().isEmpty()) {
-                        cleanupInvalidTokens(result.invalidTokens());
+                    if (result != null && !result.invalidTokens().isEmpty()) {
+                        tokenCleanupService.cleanupInvalidTokens(result.invalidTokens());
                     }
                 });
         log.info("Broadcasted system notification: title={}, referenceId={}", title, referenceId);
@@ -506,28 +509,13 @@ public class NotificationService {
             firebaseService.sendToMultipleTokensWithDataAsync(tokens, title, content, data)
                     .thenAccept(result -> {
                         if (result != null && !result.invalidTokens().isEmpty()) {
-                            cleanupInvalidTokens(result.invalidTokens());
+                            tokenCleanupService.cleanupInvalidTokens(result.invalidTokens());
                         }
                     });
         } catch (Exception e) {
             log.error("Failed to send FCM push to customerId={} (tokens: {}): {}",
                     customerId, tokens.size(), e.getMessage());
             // KHÔNG throw lỗi ra ngoài để Transaction vẫn được commit
-        }
-    }
-
-    /**
-     * Dọn dẹp các token không hợp lệ (hết hạn hoặc app đã gỡ).
-     */
-    @Transactional("primaryTransactionManager")
-    public void cleanupInvalidTokens(List<String> tokens) {
-        if (tokens == null || tokens.isEmpty())
-            return;
-        try {
-            customerDeviceRepository.deleteByDeviceTokenIn(tokens);
-            log.info("Cleaned up {} invalid device tokens", tokens.size());
-        } catch (Exception e) {
-            log.error("Failed to cleanup invalid tokens: {}", e.getMessage());
         }
     }
 
