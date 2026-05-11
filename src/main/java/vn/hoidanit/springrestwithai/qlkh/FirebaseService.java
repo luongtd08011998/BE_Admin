@@ -183,7 +183,7 @@ public class FirebaseService {
     /**
      * Gửi thông báo đến một topic cụ thể.
      */
-    public void sendToTopic(String topic, String title, String body, java.util.Map<String, String> data) {
+    public FCMBatchResult sendToTopic(String topic, String title, String body, java.util.Map<String, String> data) {
         try {
             Message.Builder messageBuilder = Message.builder()
                     .setTopic(topic)
@@ -200,11 +200,13 @@ public class FirebaseService {
             log.info("FCM sent to topic={}: messageId={}", topic, response);
             systemLogService.logNotification("TOPIC:" + topic, "SEND_FCM_TOPIC", "SUCCESS",
                     String.format("Title: %s", title), response);
+            return new FCMBatchResult(1, 0, List.of());
         } catch (FirebaseMessagingException e) {
             log.error("FCM error for topic={}: code={} message={}", topic,
                     e.getMessagingErrorCode(), e.getMessage());
             systemLogService.logNotification("TOPIC:" + topic, "SEND_FCM_TOPIC", "FAILURE",
                     String.format("Error: %s", e.getMessage()), e.getMessagingErrorCode().toString());
+            return new FCMBatchResult(0, 1, List.of());
         }
     }
 
@@ -212,8 +214,8 @@ public class FirebaseService {
      * Phiên bản bất đồng bộ của sendToTopic.
      */
     @Async("fcmTaskExecutor")
-    public void sendToTopicAsync(String topic, String title, String body, java.util.Map<String, String> data) {
-        sendToTopic(topic, title, body, data);
+    public CompletableFuture<FCMBatchResult> sendToTopicAsync(String topic, String title, String body, java.util.Map<String, String> data) {
+        return CompletableFuture.completedFuture(sendToTopic(topic, title, body, data));
     }
 
     /**
