@@ -3,15 +3,20 @@ package vn.hoidanit.springrestwithai.qlkh;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
+import java.util.concurrent.CompletableFuture;
+import com.google.firebase.messaging.MessagingErrorCode;
 import com.google.firebase.messaging.MulticastMessage;
 import com.google.firebase.messaging.Notification;
+import com.google.firebase.messaging.SendResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import vn.hoidanit.springrestwithai.feature.log.SystemLogService;
+import vn.hoidanit.springrestwithai.qlkh.dto.FCMBatchResult;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -61,10 +66,10 @@ public class FirebaseService {
     /**
      * Gửi thông báo đến nhiều device token cùng lúc (multicast, tối đa 500 token/lần).
      */
-    public void sendToMultipleTokens(List<String> tokens, String title, String body) {
+    public FCMBatchResult sendToMultipleTokens(List<String> tokens, String title, String body) {
         if (tokens == null || tokens.isEmpty()) {
             log.debug("FCM multicast skipped — no tokens.");
-            return;
+            return FCMBatchResult.empty();
         }
         try {
             MulticastMessage message = MulticastMessage.builder()
@@ -78,22 +83,32 @@ public class FirebaseService {
             log.info("FCM multicast: successCount={} failureCount={}",
                     result.getSuccessCount(), result.getFailureCount());
 
-            String status = result.getFailureCount() == 0 ? "SUCCESS" : "PARTIAL_SUCCESS";
-            String description = String.format("Title: %s, Success: %d, Failure: %d",
-                    title, result.getSuccessCount(), result.getFailureCount());
-            systemLogService.logNotification("BATCH", "SEND_FCM_MULTICAST", status, description, null);
-
+            List<String> invalidTokens = new ArrayList<>();
             if (result.getFailureCount() > 0) {
-                result.getResponses().forEach(r -> {
+                List<SendResponse> responses = result.getResponses();
+                for (int i = 0; i < responses.size(); i++) {
+                    SendResponse r = responses.get(i);
                     if (!r.isSuccessful()) {
                         log.warn("FCM multicast partial failure: {}", r.getException().getMessage());
+                        MessagingErrorCode code = r.getException().getMessagingErrorCode();
+                        if (code == MessagingErrorCode.UNREGISTERED || code == MessagingErrorCode.INVALID_ARGUMENT) {
+                            invalidTokens.add(tokens.get(i));
+                        }
                     }
-                });
+                }
             }
+
+            String status = result.getFailureCount() == 0 ? "SUCCESS" : "PARTIAL_SUCCESS";
+            String description = String.format("Title: %s, Success: %d, Failure: %d, InvalidTokens: %d",
+                    title, result.getSuccessCount(), result.getFailureCount(), invalidTokens.size());
+            systemLogService.logNotification("BATCH", "SEND_FCM_MULTICAST", status, description, null);
+
+            return new FCMBatchResult(result.getSuccessCount(), result.getFailureCount(), invalidTokens);
         } catch (FirebaseMessagingException e) {
             log.error("FCM multicast error: {}", e.getMessage(), e);
             systemLogService.logNotification("BATCH", "SEND_FCM_MULTICAST", "FAILURE",
                     String.format("Error: %s", e.getMessage()), null);
+            return new FCMBatchResult(0, tokens.size(), List.of());
         }
     }
 
@@ -102,18 +117,18 @@ public class FirebaseService {
      * Dùng cho Scheduler/batch job để không block thread chính.
      */
     @Async("fcmTaskExecutor")
-    public void sendToMultipleTokensAsync(List<String> tokens, String title, String body) {
-        sendToMultipleTokens(tokens, title, body);
+    public CompletableFuture<FCMBatchResult> sendToMultipleTokensAsync(List<String> tokens, String title, String body) {
+        return CompletableFuture.completedFuture(sendToMultipleTokens(tokens, title, body));
     }
 
     /**
      * Gửi multicast kèm data payload (dùng cho FEEDBACK deep link).
      */
-    public void sendToMultipleTokensWithData(List<String> tokens, String title, String body,
+    public FCMBatchResult sendToMultipleTokensWithData(List<String> tokens, String title, String body,
             java.util.Map<String, String> data) {
         if (tokens == null || tokens.isEmpty()) {
             log.debug("FCM multicast with data skipped — no tokens.");
-            return;
+            return FCMBatchResult.empty();
         }
         try {
             MulticastMessage.Builder builder = MulticastMessage.builder()
@@ -129,30 +144,40 @@ public class FirebaseService {
             log.info("FCM multicast with data: successCount={} failureCount={}",
                     result.getSuccessCount(), result.getFailureCount());
 
-            String status = result.getFailureCount() == 0 ? "SUCCESS" : "PARTIAL_SUCCESS";
-            String description = String.format("Title: %s (with data), Success: %d, Failure: %d",
-                    title, result.getSuccessCount(), result.getFailureCount());
-            systemLogService.logNotification("BATCH", "SEND_FCM_MULTICAST_DATA", status, description, null);
-
+            List<String> invalidTokens = new ArrayList<>();
             if (result.getFailureCount() > 0) {
-                result.getResponses().forEach(r -> {
+                List<SendResponse> responses = result.getResponses();
+                for (int i = 0; i < responses.size(); i++) {
+                    SendResponse r = responses.get(i);
                     if (!r.isSuccessful()) {
                         log.warn("FCM multicast partial failure: {}", r.getException().getMessage());
+                        MessagingErrorCode code = r.getException().getMessagingErrorCode();
+                        if (code == MessagingErrorCode.UNREGISTERED || code == MessagingErrorCode.INVALID_ARGUMENT) {
+                            invalidTokens.add(tokens.get(i));
+                        }
                     }
-                });
+                }
             }
+
+            String status = result.getFailureCount() == 0 ? "SUCCESS" : "PARTIAL_SUCCESS";
+            String description = String.format("Title: %s (with data), Success: %d, Failure: %d, InvalidTokens: %d",
+                    title, result.getSuccessCount(), result.getFailureCount(), invalidTokens.size());
+            systemLogService.logNotification("BATCH", "SEND_FCM_MULTICAST_DATA", status, description, null);
+
+            return new FCMBatchResult(result.getSuccessCount(), result.getFailureCount(), invalidTokens);
         } catch (FirebaseMessagingException e) {
             log.error("FCM multicast with data error: {}", e.getMessage(), e);
             systemLogService.logNotification("BATCH", "SEND_FCM_MULTICAST_DATA", "FAILURE",
                     String.format("Error: %s", e.getMessage()), null);
+            return new FCMBatchResult(0, tokens.size(), List.of());
         }
     }
 
     /** Phiên bản async của sendToMultipleTokensWithData. */
     @Async("fcmTaskExecutor")
-    public void sendToMultipleTokensWithDataAsync(List<String> tokens, String title, String body,
+    public CompletableFuture<FCMBatchResult> sendToMultipleTokensWithDataAsync(List<String> tokens, String title, String body,
             java.util.Map<String, String> data) {
-        sendToMultipleTokensWithData(tokens, title, body, data);
+        return CompletableFuture.completedFuture(sendToMultipleTokensWithData(tokens, title, body, data));
     }
 
     /**

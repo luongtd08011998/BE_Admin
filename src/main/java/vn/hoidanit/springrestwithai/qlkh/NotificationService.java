@@ -21,6 +21,7 @@ import vn.hoidanit.springrestwithai.feature.article.ArticleRepository;
 import vn.hoidanit.springrestwithai.feature.feedback.entity.Feedback;
 import vn.hoidanit.springrestwithai.feature.feedback.entity.FeedbackStatus;
 import vn.hoidanit.springrestwithai.qlkh.dto.NotificationResponse;
+import vn.hoidanit.springrestwithai.qlkh.dto.FCMBatchResult;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -312,7 +313,12 @@ public class NotificationService {
             data.put("referenceId", referenceId.toString());
         }
 
-        firebaseService.sendToTopicAsync("general_news", title, content, data);
+        firebaseService.sendToTopicAsync("general_news", title, content, data)
+                .thenAccept(result -> {
+                    if (!result.invalidTokens().isEmpty()) {
+                        cleanupInvalidTokens(result.invalidTokens());
+                    }
+                });
         log.info("Broadcasted system notification: title={}, referenceId={}", title, referenceId);
     }
 
@@ -497,11 +503,31 @@ public class NotificationService {
         }
 
         try {
-            firebaseService.sendToMultipleTokensWithDataAsync(tokens, title, content, data);
+            firebaseService.sendToMultipleTokensWithDataAsync(tokens, title, content, data)
+                    .thenAccept(result -> {
+                        if (result != null && !result.invalidTokens().isEmpty()) {
+                            cleanupInvalidTokens(result.invalidTokens());
+                        }
+                    });
         } catch (Exception e) {
             log.error("Failed to send FCM push to customerId={} (tokens: {}): {}",
                     customerId, tokens.size(), e.getMessage());
             // KHÔNG throw lỗi ra ngoài để Transaction vẫn được commit
+        }
+    }
+
+    /**
+     * Dọn dẹp các token không hợp lệ (hết hạn hoặc app đã gỡ).
+     */
+    @Transactional("primaryTransactionManager")
+    public void cleanupInvalidTokens(List<String> tokens) {
+        if (tokens == null || tokens.isEmpty())
+            return;
+        try {
+            customerDeviceRepository.deleteByDeviceTokenIn(tokens);
+            log.info("Cleaned up {} invalid device tokens", tokens.size());
+        } catch (Exception e) {
+            log.error("Failed to cleanup invalid tokens: {}", e.getMessage());
         }
     }
 
