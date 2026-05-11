@@ -14,4 +14,6 @@ public interface CustomerDeviceRepository extends JpaRepository<CustomerDevice, 
     boolean existsByCustomerIdAndDeviceToken(Integer customerId, String deviceToken);
 
     long deleteByCustomerIdAndDeviceToken(Integer customerId, String deviceToken);
+
+    void deleteByDeviceTokenIn(List<String> deviceTokens);
 }
