@@ -233,9 +233,9 @@ public class QlkhController {
                 pageable.getPageSize(),
                 Sort.by(Sort.Order.desc("yearMonth"), Sort.Order.desc("monthInvoiceId")));
         Page<MonthInvoice> source = ym.isEmpty()
-                ? monthInvoiceRepository.findByCustomerIdExcludingZeroTotal(
+                ? monthInvoiceRepository.findByCustomerId(
                         customer.getCustomerId(), pageableSorted)
-                : monthInvoiceRepository.findByCustomerIdAndYearMonthContainingExcludingZeroTotal(
+                : monthInvoiceRepository.findByCustomerIdAndYearMonthContaining(
                         customer.getCustomerId(), ym, pageableSorted);
         Page<InvoiceResponse> page = source.map(inv -> toInvoiceResponse(inv, customer));
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách hóa đơn thành công",

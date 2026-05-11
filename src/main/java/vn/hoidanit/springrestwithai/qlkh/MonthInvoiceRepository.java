@@ -22,18 +22,16 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
     @Query("""
             SELECT m FROM MonthInvoice m
             WHERE m.customerId = :customerId
-            AND (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0)) <> 0
             """)
-    Page<MonthInvoice> findByCustomerIdExcludingZeroTotal(
+    Page<MonthInvoice> findByCustomerId(
             @Param("customerId") Integer customerId, Pageable pageable);
 
     @Query("""
             SELECT m FROM MonthInvoice m
             WHERE m.customerId = :customerId
             AND LOWER(m.yearMonth) LIKE LOWER(CONCAT('%', :ym, '%'))
-            AND (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0)) <> 0
             """)
-    Page<MonthInvoice> findByCustomerIdAndYearMonthContainingExcludingZeroTotal(
+    Page<MonthInvoice> findByCustomerIdAndYearMonthContaining(
             @Param("customerId") Integer customerId,
             @Param("ym") String yearMonth,
             Pageable pageable);
@@ -76,7 +74,6 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
             FROM MonthInvoice m
             JOIN Customer c ON m.customerId = c.customerId
             WHERE m.createdDate LIKE CONCAT(:datePrefix, '%')
-            AND (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0)) <> 0
             """)
     Page<vn.hoidanit.springrestwithai.qlkh.dto.InvoiceInfoDTO> findInvoiceInfoByCreatedDatePrefix(
             @Param("datePrefix") String datePrefix, Pageable pageable);
@@ -94,7 +91,6 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
             JOIN Customer c ON m.customerId = c.customerId
             WHERE m.paymentStatus = 2
             AND m.yearMonth >= :fromYearMonth
-            AND (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0)) <> 0
             AND m.monthInvoiceId NOT IN :excludeIds
             """)
     Page<vn.hoidanit.springrestwithai.qlkh.dto.InvoiceInfoDTO> findPaidInvoiceInfoExcluding(
@@ -110,7 +106,6 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
             SELECT m FROM MonthInvoice m
             WHERE m.paymentStatus = 2
             AND m.yearMonth >= :fromYearMonth
-            AND (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0)) <> 0
             """)
     Page<MonthInvoice> findRecentPaidInvoices(@Param("fromYearMonth") String fromYearMonth, Pageable pageable);
 
@@ -121,7 +116,6 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
             SELECT m FROM MonthInvoice m
             WHERE m.paymentStatus = 2
             AND m.yearMonth >= :fromYearMonth
-            AND (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0)) <> 0
             AND m.monthInvoiceId NOT IN :excludeIds
             """)
     Page<MonthInvoice> findRecentPaidInvoicesExcluding(
