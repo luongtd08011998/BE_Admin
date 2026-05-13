@@ -110,7 +110,8 @@ public class InvoiceAdminService {
                     try {
                         String payload = vnptPortalInvoiceClient.getInvView(vnptFkey);
                         if (payload != null && !payload.startsWith("ERR:")) {
-                            InvoiceViewResponse dto = vnptInvoiceHtmlParser.parse(payload, "UNKNOWN");
+                            String status = (res.getPaymentStatus() != null && res.getPaymentStatus() == 2) ? "PAID" : "UNPAID";
+                            InvoiceViewResponse dto = vnptInvoiceHtmlParser.parse(payload, status);
                             res.setInvoiceNo(dto.invoiceNo());
                         } else {
                             log.warn("VNPT Portal returned error for fkey {}: {}", res.getFkey(), payload);
