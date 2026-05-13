@@ -11,11 +11,12 @@ public class AdminInvoiceResponse {
     private String invoiceNo;
     private Integer paymentStatus;
     private Boolean isReminded;
+    private Boolean hasReplacement;
 
     @JsonIgnore
     private String fkey;
 
-    public AdminInvoiceResponse(Integer id, String digiCode, String customerName, Double totalAmount, String yearMonth, String fkey, Integer paymentStatus) {
+    public AdminInvoiceResponse(Integer id, String digiCode, String customerName, Double totalAmount, String yearMonth, String fkey, Integer paymentStatus, Boolean hasReplacement) {
         this.id = id;
         this.digiCode = digiCode;
         this.customerName = customerName;
@@ -25,6 +26,7 @@ public class AdminInvoiceResponse {
         this.paymentStatus = paymentStatus;
         this.invoiceNo = ""; // will be populated later
         this.isReminded = false;
+        this.hasReplacement = hasReplacement;
     }
 
     public Integer getId() {
@@ -97,5 +99,13 @@ public class AdminInvoiceResponse {
 
     public void setIsReminded(Boolean isReminded) {
         this.isReminded = isReminded;
+    }
+
+    public Boolean getHasReplacement() {
+        return hasReplacement;
+    }
+
+    public void setHasReplacement(Boolean hasReplacement) {
+        this.hasReplacement = hasReplacement;
     }
 }

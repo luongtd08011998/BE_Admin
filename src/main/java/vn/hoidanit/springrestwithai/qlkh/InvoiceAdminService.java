@@ -148,6 +148,15 @@ public class InvoiceAdminService {
             return new DebtReminderResponse(0, 0);
         }
 
+        // Lọc bỏ những hóa đơn có tổng tiền bằng 0 hoặc đã có hóa đơn thay thế
+        unpaidInvoices = unpaidInvoices.stream()
+                .filter(inv -> inv.getAmount() > 0 && (inv.getHasReplacement() == null || !inv.getHasReplacement()))
+                .toList();
+
+        if (unpaidInvoices.isEmpty()) {
+            return new DebtReminderResponse(0, 0);
+        }
+
         java.util.concurrent.atomic.AtomicInteger sentCount = new java.util.concurrent.atomic.AtomicInteger(0);
 
         List<CompletableFuture<Void>> futures = unpaidInvoices.stream()
