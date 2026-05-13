@@ -7,14 +7,16 @@ public class InvoiceInfoDTO {
     private String digiCode;
     private String customerName;
     private Double amount;
+    private Boolean hasReplacement;
 
-    public InvoiceInfoDTO(Integer customerId, Integer monthInvoiceId, String yearMonth, String digiCode, String customerName, Double amount) {
+    public InvoiceInfoDTO(Integer customerId, Integer monthInvoiceId, String yearMonth, String digiCode, String customerName, Double amount, Boolean hasReplacement) {
         this.customerId = customerId;
         this.monthInvoiceId = monthInvoiceId;
         this.yearMonth = yearMonth;
         this.digiCode = digiCode;
         this.customerName = customerName;
         this.amount = amount;
+        this.hasReplacement = hasReplacement;
     }
 
     public Integer getCustomerId() {
@@ -63,5 +65,13 @@ public class InvoiceInfoDTO {
 
     public void setAmount(Double amount) {
         this.amount = amount;
+    }
+
+    public Boolean getHasReplacement() {
+        return hasReplacement;
+    }
+
+    public void setHasReplacement(Boolean hasReplacement) {
+        this.hasReplacement = hasReplacement;
     }
 }
