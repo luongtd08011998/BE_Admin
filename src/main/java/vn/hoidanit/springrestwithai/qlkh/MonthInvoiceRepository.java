@@ -22,6 +22,7 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
     @Query("""
             SELECT m FROM MonthInvoice m
             WHERE m.customerId = :customerId
+            AND (m.fkey IS NOT NULL AND m.fkey <> '')
             """)
     Page<MonthInvoice> findByCustomerId(
             @Param("customerId") Integer customerId, Pageable pageable);
@@ -29,6 +30,7 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
     @Query("""
             SELECT m FROM MonthInvoice m
             WHERE m.customerId = :customerId
+            AND (m.fkey IS NOT NULL AND m.fkey <> '')
             AND LOWER(m.yearMonth) LIKE LOWER(CONCAT('%', :ym, '%'))
             """)
     Page<MonthInvoice> findByCustomerIdAndYearMonthContaining(
