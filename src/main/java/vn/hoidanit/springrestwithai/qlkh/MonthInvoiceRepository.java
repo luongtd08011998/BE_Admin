@@ -163,18 +163,22 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
             AND (:paymentStatus IS NULL OR m.paymentStatus = :paymentStatus)
             AND (:customerName IS NULL OR :customerName = '' OR LOWER(c.name) LIKE LOWER(CONCAT('%', :customerName, '%')))
             AND (:digiCode IS NULL OR :digiCode = '' OR LOWER(c.digiCode) LIKE LOWER(CONCAT('%', :digiCode, '%')))
-            AND (:remindStatus IS NULL 
-                 OR (:remindStatus = 1 AND m.monthInvoiceId IN :remindedIds) 
-                 OR (:remindStatus = 0 AND m.monthInvoiceId NOT IN :remindedIds))
+            AND (:remindStatus IS NULL
+                 OR (:remindStatus = 1 AND m.monthInvoiceId IN :remindedIds)
+                 OR (:remindStatus = 0 AND m.monthInvoiceId NOT IN :remindedIds)
+                 OR (:remindStatus = 2 AND m.monthInvoiceId IN :overdueIds)
+                 OR (:remindStatus = 3 AND m.monthInvoiceId IN :cutwaterIds))
             ORDER BY m.yearMonth DESC, m.monthInvoiceId DESC
             """)
     Page<vn.hoidanit.springrestwithai.qlkh.dto.AdminInvoiceResponse> findAdminInvoices(
-            @Param("yearMonth") String yearMonth, 
+            @Param("yearMonth") String yearMonth,
             @Param("paymentStatus") Integer paymentStatus,
             @Param("customerName") String customerName,
             @Param("digiCode") String digiCode,
             @Param("remindStatus") Integer remindStatus,
             @Param("remindedIds") java.util.List<Integer> remindedIds,
+            @Param("overdueIds") java.util.List<Integer> overdueIds,
+            @Param("cutwaterIds") java.util.List<Integer> cutwaterIds,
             Pageable pageable);
 
     @Query("""

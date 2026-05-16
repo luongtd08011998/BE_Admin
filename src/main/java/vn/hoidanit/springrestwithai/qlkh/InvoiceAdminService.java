@@ -76,19 +76,28 @@ public class InvoiceAdminService {
             remindedIds = java.util.List.of(-1);
         }
 
-        Page<AdminInvoiceResponse> page = monthInvoiceRepository.findAdminInvoices(yearMonth, paymentStatus, customerName, digiCode, remindStatus, remindedIds, pageable);
+        // Fetch overdue and cutwater invoice IDs
+        java.util.List<Long> overdueLongIds = notificationService.findAllOverdueInvoiceIds();
+        java.util.List<Integer> overdueIds = overdueLongIds.stream().map(Long::intValue).toList();
+        if (overdueIds.isEmpty()) overdueIds = java.util.List.of(-1);
+
+        java.util.List<Long> cutwaterLongIds = notificationService.findAllCutwaterInvoiceIds();
+        java.util.List<Integer> cutwaterIds = cutwaterLongIds.stream().map(Long::intValue).toList();
+        if (cutwaterIds.isEmpty()) cutwaterIds = java.util.List.of(-1);
+
+        Page<AdminInvoiceResponse> page = monthInvoiceRepository.findAdminInvoices(yearMonth, paymentStatus, customerName, digiCode, remindStatus, remindedIds, overdueIds, cutwaterIds, pageable);
 
         // Gọi VNPT song song cho tất cả hóa đơn trong trang hiện tại
         List<AdminInvoiceResponse> content = page.getContent();
         
-        // Map isReminded boolean
+        // Map isReminded, isOverdue, isWaterCutoff boolean
         java.util.Set<Integer> remindedSet = new java.util.HashSet<>(remindedIds);
+        java.util.Set<Integer> overdueSet = new java.util.HashSet<>(overdueIds);
+        java.util.Set<Integer> cutwaterSet = new java.util.HashSet<>(cutwaterIds);
         for (AdminInvoiceResponse res : content) {
-            if (remindedSet.contains(res.getId())) {
-                res.setIsReminded(true);
-            } else {
-                res.setIsReminded(false);
-            }
+            res.setIsReminded(remindedSet.contains(res.getId()));
+            res.setIsOverdue(overdueSet.contains(res.getId()));
+            res.setIsWaterCutoff(cutwaterSet.contains(res.getId()));
         }
 
         fetchInvoiceNosParallel(content);
@@ -256,6 +265,11 @@ public class InvoiceAdminService {
         }
         var invoice = monthInvoiceRepository.findById(monthInvoiceId).orElse(null);
         if (invoice == null) return false;
+
+        // Chỉ gửi cúp nước cho hóa đơn chưa thanh toán
+        if (invoice.getPaymentStatus() != null && invoice.getPaymentStatus() == 2) {
+            return false;
+        }
 
         var customer = customerRepository.findById(invoice.getCustomerId()).orElse(null);
         String digiCode = customer != null ? customer.getDigiCode() : "";

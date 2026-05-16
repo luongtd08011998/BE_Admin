@@ -46,4 +46,10 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     @Query("SELECT DISTINCT n.referenceId FROM Notification n WHERE n.type = 'DEBT_REMINDER' AND n.referenceId IS NOT NULL")
     List<Long> findAllRemindedInvoiceIds();
+
+    @Query("SELECT DISTINCT n.referenceId FROM Notification n WHERE n.type = 'OVERDUE' AND n.referenceId IS NOT NULL")
+    List<Long> findAllOverdueInvoiceIds();
+
+    @Query("SELECT DISTINCT n.referenceId FROM Notification n WHERE n.type = 'WATER_CUTOFF' AND n.referenceId IS NOT NULL")
+    List<Long> findAllCutwaterInvoiceIds();
 }

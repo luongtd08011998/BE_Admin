@@ -11,6 +11,8 @@ public class AdminInvoiceResponse {
     private String invoiceNo;
     private Integer paymentStatus;
     private Boolean isReminded;
+    private Boolean isOverdue;
+    private Boolean isWaterCutoff;
     private Boolean hasReplacement;
 
     @JsonIgnore
@@ -26,6 +28,8 @@ public class AdminInvoiceResponse {
         this.paymentStatus = paymentStatus;
         this.invoiceNo = ""; // will be populated later
         this.isReminded = false;
+        this.isOverdue = false;
+        this.isWaterCutoff = false;
         this.hasReplacement = hasReplacement;
     }
 
@@ -99,6 +103,22 @@ public class AdminInvoiceResponse {
 
     public void setIsReminded(Boolean isReminded) {
         this.isReminded = isReminded;
+    }
+
+    public Boolean getIsOverdue() {
+        return isOverdue;
+    }
+
+    public void setIsOverdue(Boolean isOverdue) {
+        this.isOverdue = isOverdue;
+    }
+
+    public Boolean getIsWaterCutoff() {
+        return isWaterCutoff;
+    }
+
+    public void setIsWaterCutoff(Boolean isWaterCutoff) {
+        this.isWaterCutoff = isWaterCutoff;
     }
 
     public Boolean getHasReplacement() {

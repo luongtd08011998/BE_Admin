@@ -387,6 +387,14 @@ public class NotificationService {
         return notificationRepository.findAllRemindedInvoiceIds();
     }
 
+    public List<Long> findAllOverdueInvoiceIds() {
+        return notificationRepository.findAllOverdueInvoiceIds();
+    }
+
+    public List<Long> findAllCutwaterInvoiceIds() {
+        return notificationRepository.findAllCutwaterInvoiceIds();
+    }
+
     /**
      * Gửi thông báo hệ thống (FCM Topic)
      */
