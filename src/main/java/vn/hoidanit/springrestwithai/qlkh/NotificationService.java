@@ -50,6 +50,18 @@ public class NotificationService {
     @Value("${app.base-url}")
     private String appBaseUrl;
 
+    @Value("${app.company-name:CNTOCTIEN}")
+    private String companyName;
+
+    @Value("${app.hotline:}")
+    private String hotline;
+
+    @Value("${app.water-cutoff.employee-name:}")
+    private String defaultCutoffEmployeeName;
+
+    @Value("${app.water-cutoff.employee-phone:}")
+    private String defaultCutoffEmployeePhone;
+
     private final CustomerDeviceRepository customerDeviceRepository;
     private final NotificationRepository notificationRepository;
     private final NotifiedInvoiceRepository notifiedInvoiceRepository;
@@ -130,8 +142,13 @@ public class NotificationService {
      */
     @Transactional("primaryTransactionManager")
     public void sendPaymentSuccessNotification(Integer customerId, Integer monthInvoiceId) {
-        String title = "Thanh toán thành công";
-        String content = "Bạn đã thanh toán hóa đơn thành công. Cảm ơn bạn!";
+        String title = "[" + companyName + "] THÔNG BÁO XÁC NHẬN THANH TOÁN";
+        String content = "Kính gửi Quý khách hàng,\n\n"
+                + companyName + " trân trọng thông báo: Quý khách đã thanh toán hóa đơn thành công.\n\n"
+                + "Chân thành cảm ơn Quý khách đã tin tưởng và sử dụng dịch vụ của chúng tôi.\n\n"
+                + "Mọi thắc mắc cần hỗ trợ, Quý khách vui lòng liên hệ:\n\n"
+                + "Trung tâm CSKH " + companyName
+                + (hotline != null && !hotline.isBlank() ? "\n\nHotline: " + hotline : "");
         saveAndPush(customerId, title, content, "PAYMENT", Long.valueOf(monthInvoiceId));
     }
 
@@ -139,15 +156,88 @@ public class NotificationService {
      * Gọi khi Admin gửi nhắc nợ: lưu notification + push FCM.
      */
     @Transactional("primaryTransactionManager")
-    public void sendDebtReminderNotification(Integer customerId, Integer monthInvoiceId, String yearMonth, String digiCode, String customerName, Double amount) {
+    public void sendDebtReminderNotification(Integer customerId, Integer monthInvoiceId, String yearMonth, String digiCode, String customerName, Double amount, String address) {
         String formattedYm = formatYearMonth(yearMonth);
         java.text.NumberFormat currencyFormatter = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("vi", "VN"));
         String formattedAmount = currencyFormatter.format(amount != null ? amount : 0);
-        
-        String title = "Nhắc nợ hóa đơn";
-        String content = String.format("Kính gửi %s (Mã KH: %s), hóa đơn tiền nước tháng %s với số tiền %s của bạn chưa được thanh toán. Vui lòng thanh toán đúng hạn.", 
-                                       customerName, digiCode, formattedYm, formattedAmount);
+        String displayAddress = (address != null && !address.isBlank()) ? address : "";
+
+        String title = "[" + companyName + "] THÔNG BÁO TIỀN NƯỚC KỲ " + formattedYm;
+        StringBuilder contentBuilder = new StringBuilder();
+        contentBuilder.append(companyName).append(" trân trọng thông báo về việc tiền nước kỳ ")
+                .append(formattedYm).append(". ");
+        contentBuilder.append("Kính gửi khách hàng: ").append(customerName)
+                .append(", Mã KH: ").append(digiCode);
+        if (!displayAddress.isEmpty()) {
+            contentBuilder.append(", địa chỉ: ").append(displayAddress);
+        }
+        contentBuilder.append(". Số tiền cần thanh toán là ").append(formattedAmount).append(" đồng. ");
+        contentBuilder.append("Quý khách vui lòng thanh toán trong vòng 07 ngày kể từ khi nhận được thông báo này ")
+                .append("qua các ứng dụng trực tuyến của ngân hàng, ví điện tử: Payoo, ZaloPay, VNPT Money, AirPay, MoMo ")
+                .append("hoặc các điểm thu hộ: Circle K, Family Mart, Thế giới di động, Điện máy xanh, FPT và các bưu điện gần nhất. ");
+        contentBuilder.append("Chân thành cảm ơn sự hợp tác của Quý khách. ");
+        contentBuilder.append("Mọi chi tiết xin liên hệ Trung tâm CSKH ").append(companyName);
+        if (hotline != null && !hotline.isBlank()) {
+            contentBuilder.append(": ").append(hotline);
+        }
+        contentBuilder.append(".");
+        String content = contentBuilder.toString();
         saveAndPush(customerId, title, content, "DEBT_REMINDER", Long.valueOf(monthInvoiceId));
+    }
+
+    /**
+     * Gọi khi Admin gửi thông báo quá hạn: lưu notification + push FCM.
+     */
+    @Transactional("primaryTransactionManager")
+    public void sendOverdueNotification(Integer customerId, Integer monthInvoiceId, String yearMonth, String digiCode, String customerName, String address) {
+        String formattedYm = formatYearMonth(yearMonth);
+        String displayAddress = (address != null && !address.isBlank()) ? address : "";
+
+        String title = "[" + companyName + "] Thông báo về việc quá hạn thanh toán tiền nước";
+        StringBuilder contentBuilder = new StringBuilder();
+        contentBuilder.append(companyName).append(" Thông báo về việc quá hạn thanh toán tiền nước. ");
+        contentBuilder.append("Kính gửi khách hàng: ").append(customerName)
+                .append(", Mã KH: ").append(digiCode);
+        if (!displayAddress.isEmpty()) {
+            contentBuilder.append(", địa chỉ: ").append(displayAddress);
+        }
+        contentBuilder.append(". Hóa đơn kỳ ").append(formattedYm)
+                .append(" của Quý khách đã quá hạn thanh toán. ")
+                .append("Quá thời hạn trên, chúng tôi xin phép được tạm ngưng cấp nước. ")
+                .append("Việc cấp nước trở lại sẽ được thực hiện sau 24h kể từ khi Quý khách hoàn tất thanh toán tiền nước và chi phí mở nước 100.000 VND. ");
+        contentBuilder.append("Trân trọng cảm ơn. ");
+        contentBuilder.append("Mọi chi tiết xin liên hệ Trung tâm CSKH ").append(companyName);
+        if (hotline != null && !hotline.isBlank()) {
+            contentBuilder.append(": ").append(hotline);
+        }
+        contentBuilder.append(".");
+        String content = contentBuilder.toString();
+        saveAndPush(customerId, title, content, "OVERDUE", Long.valueOf(monthInvoiceId));
+    }
+
+    /**
+     * Gọi khi Admin gửi thông báo cúp nước: lưu notification + push FCM.
+     * Nếu employeeName/employeePhone null → dùng giá trị mặc định từ config.
+     */
+    @Transactional("primaryTransactionManager")
+    public void sendWaterCutoffNotification(Integer customerId, Integer monthInvoiceId, String digiCode, String employeeName, String employeePhone) {
+        String empName = (employeeName != null && !employeeName.isBlank()) ? employeeName : defaultCutoffEmployeeName;
+        String empPhone = (employeePhone != null && !employeePhone.isBlank()) ? employeePhone : defaultCutoffEmployeePhone;
+
+        String title = "[" + companyName + "] Thông báo cúp nước";
+        StringBuilder contentBuilder = new StringBuilder();
+        contentBuilder.append("[").append(companyName).append("]: ");
+        contentBuilder.append("Do quý khách quá hạn thanh toán tiền nước mã KH ").append(digiCode);
+        contentBuilder.append(", việc cúp nước đã được chuyển cho nhân viên ").append(empName);
+        contentBuilder.append(" - ").append(empPhone).append(" thực hiện. ");
+        contentBuilder.append("Trân trọng. ");
+        contentBuilder.append("Mọi chi tiết xin liên hệ Trung tâm CSKH ").append(companyName);
+        if (hotline != null && !hotline.isBlank()) {
+            contentBuilder.append(": ").append(hotline);
+        }
+        contentBuilder.append(".");
+        String content = contentBuilder.toString();
+        saveAndPush(customerId, title, content, "WATER_CUTOFF", Long.valueOf(monthInvoiceId));
     }
 
     /**
@@ -334,7 +424,7 @@ public class NotificationService {
      * @return true nếu đã gửi thành công, false nếu đã gửi trước đó (bỏ qua)
      */
     @Transactional("primaryTransactionManager")
-    public boolean sendAndMarkInvoiceNotification(Integer monthInvoiceId, Integer customerId, String yearMonth, String digiCode, String customerName, Double amount) {
+    public boolean sendAndMarkInvoiceNotification(Integer monthInvoiceId, Integer customerId, String yearMonth, String digiCode, String customerName, Double amount, String address) {
         // Kiểm tra đã gửi thông báo cho hóa đơn này chưa
         if (notifiedInvoiceRepository.existsByMonthInvoiceId(monthInvoiceId)) {
             log.debug("Invoice {} already notified — skipping.", monthInvoiceId);
@@ -345,10 +435,27 @@ public class NotificationService {
         java.text.NumberFormat currencyFormatter = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("vi", "VN"));
         String formattedAmount = currencyFormatter.format(amount != null ? amount : 0);
         String formattedYm = formatYearMonth(yearMonth);
+        String displayAddress = (address != null && !address.isBlank()) ? address : "";
 
-        String title = "Thông báo tiền nước kỳ " + formattedYm;
-        String content = String.format("Thông báo tiền nước kỳ %s của KH %s, Mã KH %s là %s.",
-                formattedYm, customerName, digiCode, formattedAmount);
+        String title = "[" + companyName + "] THÔNG BÁO TIỀN NƯỚC KỲ " + formattedYm;
+        StringBuilder contentBuilder = new StringBuilder();
+        contentBuilder.append("Kính gửi Quý khách hàng ").append(customerName).append(",\n\n");
+        contentBuilder.append(companyName).append(" xin thông báo hóa đơn tiền nước kỳ ")
+                .append(formattedYm).append(" của Quý khách (Mã KH: ").append(digiCode);
+        if (!displayAddress.isEmpty()) {
+            contentBuilder.append(" - Địa chỉ: ").append(displayAddress);
+        }
+        contentBuilder.append(") có tổng số tiền thanh toán là ").append(formattedAmount).append(" đồng.\n\n");
+        contentBuilder.append("Hạn thanh toán trong vòng 07 ngày kể từ khi nhận được thông báo này.\n\n");
+        contentBuilder.append("Quý khách có thể thanh toán qua các Ví điện tử Payoo, ZaloPay, VNPT Money, AirPay, MoMo, ")
+                .append("ứng dụng Ngân hàng hoặc tại các điểm thu hộ: Circle K, Family Mart, Thế giới di động, ")
+                .append("Điện máy xanh, FPT và các bưu điện gần nhất.\n\n");
+        contentBuilder.append("Chân thành cảm ơn sự hợp tác của Quý khách.\n\n");
+        contentBuilder.append("Mọi chi tiết xin liên hệ Trung tâm CSKH ").append(companyName);
+        if (hotline != null && !hotline.isBlank()) {
+            contentBuilder.append(": ").append(hotline);
+        }
+        String content = contentBuilder.toString();
         saveAndPush(customerId, title, content, "INVOICE", Long.valueOf(monthInvoiceId));
 
         // Đánh dấu đã gửi
@@ -370,7 +477,7 @@ public class NotificationService {
      * @return true nếu đã gửi thành công, false nếu đã gửi trước đó (bỏ qua)
      */
     @Transactional("primaryTransactionManager")
-    public boolean sendAndMarkPaymentNotification(Integer monthInvoiceId, Integer customerId, String yearMonth, String digiCode, String customerName, Double amount) {
+    public boolean sendAndMarkPaymentNotification(Integer monthInvoiceId, Integer customerId, String yearMonth, String digiCode, String customerName, Double amount, String address) {
         // Kiểm tra đã gửi thông báo thanh toán cho hóa đơn này chưa
         if (notifiedPaymentRepository.existsByMonthInvoiceId(monthInvoiceId)) {
             log.debug("Payment invoice {} already notified — skipping.", monthInvoiceId);
@@ -381,10 +488,24 @@ public class NotificationService {
         java.text.NumberFormat currencyFormatter = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("vi", "VN"));
         String formattedAmount = currencyFormatter.format(amount != null ? amount : 0);
         String formattedYm = formatYearMonth(yearMonth);
+        String displayAddress = (address != null && !address.isBlank()) ? address : "";
 
-        String title = "Thanh toán thành công";
-        String content = String.format("Cảm ơn khách hàng %s, Mã KH %s đã thanh toán hóa đơn tháng %s với số tiền %s.",
-                customerName, digiCode, formattedYm, formattedAmount);
+        String title = "[" + companyName + "] THÔNG BÁO XÁC NHẬN THANH TOÁN";
+        StringBuilder contentBuilder = new StringBuilder();
+        contentBuilder.append("Kính gửi Quý khách hàng,\n\n");
+        contentBuilder.append(companyName).append(" trân trọng thông báo: Hóa đơn tiền nước kỳ ")
+                .append(formattedYm).append(" của Quý khách (Mã KH: ").append(digiCode);
+        if (!displayAddress.isEmpty()) {
+            contentBuilder.append(" - Địa chỉ: ").append(displayAddress);
+        }
+        contentBuilder.append(") đã được thanh toán thành công với số tiền ").append(formattedAmount).append(" đồng.\n\n");
+        contentBuilder.append("Chân thành cảm ơn Quý khách đã tin tưởng và sử dụng dịch vụ của chúng tôi.\n\n");
+        contentBuilder.append("Mọi thắc mắc cần hỗ trợ, Quý khách vui lòng liên hệ:\n\n");
+        contentBuilder.append("Trung tâm CSKH ").append(companyName);
+        if (hotline != null && !hotline.isBlank()) {
+            contentBuilder.append("\n\nHotline: ").append(hotline);
+        }
+        String content = contentBuilder.toString();
         saveAndPush(customerId, title, content, "PAYMENT", Long.valueOf(monthInvoiceId));
 
         // Đánh dấu đã gửi

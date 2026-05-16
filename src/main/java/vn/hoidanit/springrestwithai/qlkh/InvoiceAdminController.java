@@ -52,4 +52,45 @@ public class InvoiceAdminController {
         DebtReminderResponse response = invoiceAdminService.sendDebtReminder(yearMonth, monthInvoiceId);
         return ResponseEntity.ok(ApiResponse.success("Gửi thông báo nhắc nợ thành công", response));
     }
+
+    @PostMapping("/send-overdue-reminder")
+    public ResponseEntity<ApiResponse<DebtReminderResponse>> sendOverdueReminder(@RequestBody java.util.Map<String, String> request) {
+        String yearMonth = request.get("yearMonth");
+        if (yearMonth == null || yearMonth.isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.badRequest("Vui lòng cung cấp yearMonth"));
+        }
+
+        Integer monthInvoiceId = null;
+        if (request.containsKey("monthInvoiceId") && request.get("monthInvoiceId") != null && !request.get("monthInvoiceId").isBlank()) {
+            try {
+                monthInvoiceId = Integer.parseInt(request.get("monthInvoiceId"));
+            } catch (NumberFormatException e) {
+                return ResponseEntity.badRequest().body(ApiResponse.badRequest("monthInvoiceId không hợp lệ"));
+            }
+        }
+
+        DebtReminderResponse response = invoiceAdminService.sendOverdueReminder(yearMonth, monthInvoiceId);
+        return ResponseEntity.ok(ApiResponse.success("Gửi thông báo quá hạn thành công", response));
+    }
+
+    @PostMapping("/send-water-cutoff")
+    public ResponseEntity<ApiResponse<Boolean>> sendWaterCutoff(@RequestBody java.util.Map<String, String> request) {
+        String monthInvoiceIdStr = request.get("monthInvoiceId");
+        if (monthInvoiceIdStr == null || monthInvoiceIdStr.isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.badRequest("Vui lòng cung cấp monthInvoiceId"));
+        }
+
+        Integer monthInvoiceId;
+        try {
+            monthInvoiceId = Integer.parseInt(monthInvoiceIdStr);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.badRequest("monthInvoiceId không hợp lệ"));
+        }
+
+        String employeeName = request.getOrDefault("employeeName", null);
+        String employeePhone = request.getOrDefault("employeePhone", null);
+
+        boolean sent = invoiceAdminService.sendWaterCutoff(monthInvoiceId, employeeName, employeePhone);
+        return ResponseEntity.ok(ApiResponse.success("Gửi thông báo cúp nước thành công", sent));
+    }
 }
