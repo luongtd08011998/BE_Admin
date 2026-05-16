@@ -28,6 +28,7 @@ public class InvoiceAdminService {
     private static final Logger log = LoggerFactory.getLogger(InvoiceAdminService.class);
 
     private final MonthInvoiceRepository monthInvoiceRepository;
+    private final CustomerRepository customerRepository;
     private final VnptPortalInvoiceClient vnptPortalInvoiceClient;
     private final VnptInvoiceHtmlParser vnptInvoiceHtmlParser;
     private final NotificationService notificationService;
@@ -38,10 +39,12 @@ public class InvoiceAdminService {
     private final ExecutorService notificationExecutor = Executors.newFixedThreadPool(10);
 
     public InvoiceAdminService(MonthInvoiceRepository monthInvoiceRepository,
+                               CustomerRepository customerRepository,
                                VnptPortalInvoiceClient vnptPortalInvoiceClient,
                                VnptInvoiceHtmlParser vnptInvoiceHtmlParser,
                                NotificationService notificationService) {
         this.monthInvoiceRepository = monthInvoiceRepository;
+        this.customerRepository = customerRepository;
         this.vnptPortalInvoiceClient = vnptPortalInvoiceClient;
         this.vnptInvoiceHtmlParser = vnptInvoiceHtmlParser;
         this.notificationService = notificationService;
@@ -169,7 +172,8 @@ public class InvoiceAdminService {
                                 inv.getYearMonth(),
                                 inv.getDigiCode(),
                                 inv.getCustomerName(),
-                                inv.getAmount());
+                                inv.getAmount(),
+                                inv.getAddress());
                         sentCount.incrementAndGet();
                     } catch (Exception e) {
                         log.error("Lỗi khi gửi thông báo nhắc nợ cho invoiceId={}: {}", inv.getMonthInvoiceId(), e.getMessage());
@@ -185,6 +189,84 @@ public class InvoiceAdminService {
         }
 
         return new DebtReminderResponse(sentCount.get(), unpaidInvoices.size() - sentCount.get());
+    }
+
+    public DebtReminderResponse sendOverdueReminder(String yearMonth, Integer monthInvoiceId) {
+        if (yearMonth == null || yearMonth.isBlank()) {
+            throw new IllegalArgumentException("yearMonth is required");
+        }
+
+        List<vn.hoidanit.springrestwithai.qlkh.dto.InvoiceInfoDTO> unpaidInvoices = monthInvoiceRepository.findUnpaidInvoiceDTOsByYearMonth(yearMonth.trim());
+
+        if (monthInvoiceId != null) {
+            unpaidInvoices = unpaidInvoices.stream()
+                .filter(inv -> inv.getMonthInvoiceId().equals(monthInvoiceId))
+                .toList();
+        }
+
+        if (unpaidInvoices == null || unpaidInvoices.isEmpty()) {
+            return new DebtReminderResponse(0, 0);
+        }
+
+        unpaidInvoices = unpaidInvoices.stream()
+                .filter(inv -> inv.getAmount() > 0 && (inv.getHasReplacement() == null || !inv.getHasReplacement()))
+                .toList();
+
+        if (unpaidInvoices.isEmpty()) {
+            return new DebtReminderResponse(0, 0);
+        }
+
+        java.util.concurrent.atomic.AtomicInteger sentCount = new java.util.concurrent.atomic.AtomicInteger(0);
+
+        List<CompletableFuture<Void>> futures = unpaidInvoices.stream()
+                .filter(inv -> inv.getCustomerId() != null)
+                .map(inv -> CompletableFuture.runAsync(() -> {
+                    try {
+                        notificationService.sendOverdueNotification(
+                                inv.getCustomerId(),
+                                inv.getMonthInvoiceId(),
+                                inv.getYearMonth(),
+                                inv.getDigiCode(),
+                                inv.getCustomerName(),
+                                inv.getAddress());
+                        sentCount.incrementAndGet();
+                    } catch (Exception e) {
+                        log.error("Lỗi khi gửi thông báo quá hạn cho invoiceId={}: {}", inv.getMonthInvoiceId(), e.getMessage());
+                    }
+                }, notificationExecutor))
+                .toList();
+
+        try {
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                    .get(30, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.error("Timeout hoặc lỗi khi gửi thông báo quá hạn song song: {}", e.getMessage());
+        }
+
+        return new DebtReminderResponse(sentCount.get(), unpaidInvoices.size() - sentCount.get());
+    }
+
+    /**
+     * Gửi thông báo cúp nước cho một hóa đơn cụ thể.
+     * Admin truyền kèm tên + SĐT nhân viên thực hiện cúp nước.
+     */
+    public boolean sendWaterCutoff(Integer monthInvoiceId, String employeeName, String employeePhone) {
+        if (monthInvoiceId == null) {
+            throw new IllegalArgumentException("monthInvoiceId is required");
+        }
+        var invoice = monthInvoiceRepository.findById(monthInvoiceId).orElse(null);
+        if (invoice == null) return false;
+
+        var customer = customerRepository.findById(invoice.getCustomerId()).orElse(null);
+        String digiCode = customer != null ? customer.getDigiCode() : "";
+
+        notificationService.sendWaterCutoffNotification(
+                invoice.getCustomerId(),
+                invoice.getMonthInvoiceId(),
+                digiCode,
+                employeeName,
+                employeePhone);
+        return true;
     }
 
     private static String normalizeVnptFkey(String rawFkey) {

@@ -92,7 +92,8 @@ public class PaymentNotificationScheduler {
                             invoice.getYearMonth(),
                             invoice.getDigiCode(),
                             invoice.getCustomerName(),
-                            invoice.getAmount()
+                            invoice.getAmount(),
+                            invoice.getAddress()
                     );
                     if (sent) sentCount.incrementAndGet();
                 } catch (Exception e) {

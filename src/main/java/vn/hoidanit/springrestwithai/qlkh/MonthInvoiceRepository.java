@@ -72,10 +72,11 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
             SELECT new vn.hoidanit.springrestwithai.qlkh.dto.InvoiceInfoDTO(
                 m.customerId, m.monthInvoiceId, m.yearMonth, c.digiCode, c.name,
                 (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0)),
-                (SELECT CASE WHEN COUNT(m2) > 0 THEN true ELSE false END 
-                 FROM MonthInvoice m2 
-                 WHERE m2.customerId = m.customerId 
-                 AND m2.yearMonth = m.yearMonth 
+                c.address,
+                (SELECT CASE WHEN COUNT(m2) > 0 THEN true ELSE false END
+                 FROM MonthInvoice m2
+                 WHERE m2.customerId = m.customerId
+                 AND m2.yearMonth = m.yearMonth
                  AND (COALESCE(m2.amount, 0) + COALESCE(m2.envFee, 0) + COALESCE(m2.taxFee, 0)) = 0)
             )
             FROM MonthInvoice m
@@ -93,10 +94,11 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
             SELECT new vn.hoidanit.springrestwithai.qlkh.dto.InvoiceInfoDTO(
                 m.customerId, m.monthInvoiceId, m.yearMonth, c.digiCode, c.name,
                 (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0)),
-                (SELECT CASE WHEN COUNT(m2) > 0 THEN true ELSE false END 
-                 FROM MonthInvoice m2 
-                 WHERE m2.customerId = m.customerId 
-                 AND m2.yearMonth = m.yearMonth 
+                c.address,
+                (SELECT CASE WHEN COUNT(m2) > 0 THEN true ELSE false END
+                 FROM MonthInvoice m2
+                 WHERE m2.customerId = m.customerId
+                 AND m2.yearMonth = m.yearMonth
                  AND (COALESCE(m2.amount, 0) + COALESCE(m2.envFee, 0) + COALESCE(m2.taxFee, 0)) = 0)
             )
             FROM MonthInvoice m
@@ -179,15 +181,16 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
             SELECT new vn.hoidanit.springrestwithai.qlkh.dto.InvoiceInfoDTO(
                 m.customerId, m.monthInvoiceId, m.yearMonth, c.digiCode, c.name,
                 (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0)),
-                (SELECT CASE WHEN COUNT(m2) > 0 THEN true ELSE false END 
-                 FROM MonthInvoice m2 
-                 WHERE m2.customerId = m.customerId 
-                 AND m2.yearMonth = m.yearMonth 
+                c.address,
+                (SELECT CASE WHEN COUNT(m2) > 0 THEN true ELSE false END
+                 FROM MonthInvoice m2
+                 WHERE m2.customerId = m.customerId
+                 AND m2.yearMonth = m.yearMonth
                  AND (COALESCE(m2.amount, 0) + COALESCE(m2.envFee, 0) + COALESCE(m2.taxFee, 0)) = 0)
             )
-            FROM MonthInvoice m 
+            FROM MonthInvoice m
             JOIN Customer c ON m.customerId = c.customerId
-            WHERE m.yearMonth = :yearMonth 
+            WHERE m.yearMonth = :yearMonth
             AND m.paymentStatus = 1
             """)
     java.util.List<vn.hoidanit.springrestwithai.qlkh.dto.InvoiceInfoDTO> findUnpaidInvoiceDTOsByYearMonth(@Param("yearMonth") String yearMonth);

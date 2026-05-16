@@ -80,6 +80,11 @@ app:
   # "0 */2 * * * *" = mỗi 2 phút quét 1 lần (lệch 1 phút so với invoice để tránh tranh chấp)
   payment-notify:
     cron: "0 1/2 * * * *"
+  company-name: "CNTOCTIEN"
+  hotline: "02543 894 894"
+  water-cutoff:
+    employee-name: "Trần Đức Lương"
+    employee-phone: "0359423852"
 
 # VNPT PortalService — SOAP downloadInvErrorFkey (xem news-site/docs/APIFKEY.md).
 # Cấu hình qua biến môi trường (xem .env.example). Map TVAN thường gặp: UserName→VNPT_PORTAL_USERNAME,
