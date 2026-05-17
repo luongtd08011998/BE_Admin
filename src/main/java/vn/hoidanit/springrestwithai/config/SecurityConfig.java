@@ -60,6 +60,21 @@ public class SecurityConfig {
     };
 
     @Bean
+    @Order(0)
+    SecurityFilterChain externalApiKeyChain(HttpSecurity http, 
+            @org.springframework.beans.factory.annotation.Value("${app.api-key}") String apiKey) throws Exception {
+        http
+            .securityMatcher("/api/v1/external/**")
+            .csrf(csrf -> csrf.disable())
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .addFilterBefore(new vn.hoidanit.springrestwithai.config.ApiKeyAuthFilter(apiKey), 
+                org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
+            .authorizeHttpRequests(auth -> auth.anyRequest().authenticated());
+        return http.build();
+    }
+
+    @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(

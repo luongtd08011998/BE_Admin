@@ -15,10 +15,12 @@ public class AdminInvoiceResponse {
     private Boolean isWaterCutoff;
     private Boolean hasReplacement;
 
-    @JsonIgnore
     private String fkey;
+    private String qrUrl;
+    private String blankNo;
+    private Integer roadId;
 
-    public AdminInvoiceResponse(Integer id, String digiCode, String customerName, Double totalAmount, String yearMonth, String fkey, Integer paymentStatus, Boolean hasReplacement) {
+    public AdminInvoiceResponse(Integer id, String digiCode, String customerName, Double totalAmount, String yearMonth, String fkey, Integer paymentStatus, Boolean hasReplacement, String blankNo, Integer roadId) {
         this.id = id;
         this.digiCode = digiCode;
         this.customerName = customerName;
@@ -26,11 +28,13 @@ public class AdminInvoiceResponse {
         this.yearMonth = yearMonth;
         this.fkey = fkey;
         this.paymentStatus = paymentStatus;
-        this.invoiceNo = ""; // will be populated later
+        this.invoiceNo = blankNo != null ? blankNo : ""; // Dùng blankNo từ DB, không gọi VNPT real-time
         this.isReminded = false;
         this.isOverdue = false;
         this.isWaterCutoff = false;
         this.hasReplacement = hasReplacement;
+        this.blankNo = blankNo;
+        this.roadId = roadId;
     }
 
     public Integer getId() {
@@ -127,5 +131,29 @@ public class AdminInvoiceResponse {
 
     public void setHasReplacement(Boolean hasReplacement) {
         this.hasReplacement = hasReplacement;
+    }
+
+    public String getQrUrl() {
+        return qrUrl;
+    }
+
+    public void setQrUrl(String qrUrl) {
+        this.qrUrl = qrUrl;
+    }
+
+    public String getBlankNo() {
+        return blankNo;
+    }
+
+    public void setBlankNo(String blankNo) {
+        this.blankNo = blankNo;
+    }
+
+    public Integer getRoadId() {
+        return roadId;
+    }
+
+    public void setRoadId(Integer roadId) {
+        this.roadId = roadId;
     }
 }

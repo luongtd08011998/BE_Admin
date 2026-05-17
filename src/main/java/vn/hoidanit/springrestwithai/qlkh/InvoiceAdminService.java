@@ -9,9 +9,6 @@ import org.springframework.stereotype.Service;
 import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
 import vn.hoidanit.springrestwithai.qlkh.dto.AdminInvoiceFilterRequest;
 import vn.hoidanit.springrestwithai.qlkh.dto.AdminInvoiceResponse;
-import vn.hoidanit.springrestwithai.qlkh.dto.InvoiceViewResponse;
-import vn.hoidanit.springrestwithai.qlkh.vnpt.VnptInvoiceHtmlParser;
-import vn.hoidanit.springrestwithai.qlkh.vnpt.VnptPortalInvoiceClient;
 
 import java.util.Collections;
 import java.util.List;
@@ -29,25 +26,20 @@ public class InvoiceAdminService {
 
     private final MonthInvoiceRepository monthInvoiceRepository;
     private final CustomerRepository customerRepository;
-    private final VnptPortalInvoiceClient vnptPortalInvoiceClient;
-    private final VnptInvoiceHtmlParser vnptInvoiceHtmlParser;
     private final NotificationService notificationService;
+    private final vn.hoidanit.springrestwithai.qlkh.qrpayment.VietQrService vietQrService;
 
-    // Thread pool dùng riêng cho các lần gọi VNPT song song
-    private final ExecutorService vnptExecutor = Executors.newFixedThreadPool(10);
     // Thread pool dùng cho gửi notification song song
     private final ExecutorService notificationExecutor = Executors.newFixedThreadPool(10);
 
     public InvoiceAdminService(MonthInvoiceRepository monthInvoiceRepository,
                                CustomerRepository customerRepository,
-                               VnptPortalInvoiceClient vnptPortalInvoiceClient,
-                               VnptInvoiceHtmlParser vnptInvoiceHtmlParser,
-                               NotificationService notificationService) {
+                               NotificationService notificationService,
+                               vn.hoidanit.springrestwithai.qlkh.qrpayment.VietQrService vietQrService) {
         this.monthInvoiceRepository = monthInvoiceRepository;
         this.customerRepository = customerRepository;
-        this.vnptPortalInvoiceClient = vnptPortalInvoiceClient;
-        this.vnptInvoiceHtmlParser = vnptInvoiceHtmlParser;
         this.notificationService = notificationService;
+        this.vietQrService = vietQrService;
     }
 
     public ResultPaginationDTO getAll(AdminInvoiceFilterRequest filter, Pageable pageable) {
@@ -66,6 +58,7 @@ public class InvoiceAdminService {
         String customerName = (filter != null) ? filter.getCustomerName() : null;
         String digiCode = (filter != null) ? filter.getDigiCode() : null;
         Integer remindStatus = (filter != null) ? filter.getRemindStatus() : null;
+        Integer roadId = (filter != null) ? filter.getRoadId() : null;
 
         // Fetch all reminded invoice IDs from Notification table
         java.util.List<Long> remindedLongIds = notificationService.findAllRemindedInvoiceIds();
@@ -85,7 +78,7 @@ public class InvoiceAdminService {
         java.util.List<Integer> cutwaterIds = cutwaterLongIds.stream().map(Long::intValue).toList();
         if (cutwaterIds.isEmpty()) cutwaterIds = java.util.List.of(-1);
 
-        Page<AdminInvoiceResponse> page = monthInvoiceRepository.findAdminInvoices(yearMonth, paymentStatus, customerName, digiCode, remindStatus, remindedIds, overdueIds, cutwaterIds, pageable);
+        Page<AdminInvoiceResponse> page = monthInvoiceRepository.findAdminInvoices(yearMonth, paymentStatus, customerName, digiCode, remindStatus, roadId, remindedIds, overdueIds, cutwaterIds, pageable);
 
         // Gọi VNPT song song cho tất cả hóa đơn trong trang hiện tại
         List<AdminInvoiceResponse> content = page.getContent();
@@ -98,50 +91,17 @@ public class InvoiceAdminService {
             res.setIsReminded(remindedSet.contains(res.getId()));
             res.setIsOverdue(overdueSet.contains(res.getId()));
             res.setIsWaterCutoff(cutwaterSet.contains(res.getId()));
+            
+            if (res.getPaymentStatus() != null && res.getPaymentStatus() != 2
+                    && res.getTotalAmount() != null && res.getTotalAmount() > 0) {
+                res.setQrUrl(vietQrService.buildQrUrl(
+                    res.getDigiCode(), res.getYearMonth(), res.getTotalAmount()));
+            }
         }
-
-        fetchInvoiceNosParallel(content);
 
         return ResultPaginationDTO.fromPage(page);
     }
 
-    /**
-     * Gọi VNPT lấy invoiceNo cho tất cả hóa đơn trong danh sách một cách SONG SONG.
-     * Thay vì gọi N lần tuần tự (N × 1.5s), ta gọi tất cả cùng lúc (~1.5s tổng).
-     */
-    private void fetchInvoiceNosParallel(List<AdminInvoiceResponse> invoices) {
-        if (invoices == null || invoices.isEmpty()) {
-            return;
-        }
-
-        // Tạo danh sách CompletableFuture, mỗi cái gọi VNPT cho 1 hóa đơn
-        List<CompletableFuture<Void>> futures = invoices.stream()
-                .filter(res -> res.getFkey() != null && !res.getFkey().isBlank())
-                .map(res -> CompletableFuture.runAsync(() -> {
-                    String vnptFkey = normalizeVnptFkey(res.getFkey());
-                    try {
-                        String payload = vnptPortalInvoiceClient.getInvView(vnptFkey);
-                        if (payload != null && !payload.startsWith("ERR:")) {
-                            String status = (res.getPaymentStatus() != null && res.getPaymentStatus() == 2) ? "PAID" : "UNPAID";
-                            InvoiceViewResponse dto = vnptInvoiceHtmlParser.parse(payload, status);
-                            res.setInvoiceNo(dto.invoiceNo());
-                        } else {
-                            log.warn("VNPT Portal returned error for fkey {}: {}", res.getFkey(), payload);
-                        }
-                    } catch (Exception e) {
-                        log.error("Failed to parse VNPT invoice HTML for fkey {}: {}", res.getFkey(), e.getMessage());
-                    }
-                }, vnptExecutor))
-                .toList();
-
-        // Chờ tất cả hoàn thành (timeout tối đa 30 giây)
-        try {
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                    .get(30, java.util.concurrent.TimeUnit.SECONDS);
-        } catch (Exception e) {
-            log.error("Timeout hoặc lỗi khi gọi VNPT song song: {}", e.getMessage());
-        }
-    }
 
     public DebtReminderResponse sendDebtReminder(String yearMonth, Integer monthInvoiceId) {
         if (yearMonth == null || yearMonth.isBlank()) {
@@ -283,12 +243,5 @@ public class InvoiceAdminService {
         return true;
     }
 
-    private static String normalizeVnptFkey(String rawFkey) {
-        String t = rawFkey != null ? rawFkey.trim() : "";
-        if (t.isEmpty()) {
-            return t;
-        }
-        return t.contains(".") ? t : ("CNTOCTIEN." + t);
-    }
 }
 

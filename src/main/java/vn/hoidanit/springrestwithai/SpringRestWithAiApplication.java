@@ -14,9 +14,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 import vn.hoidanit.springrestwithai.qlkh.vnpt.VnptPortalProperties;
 
+import vn.hoidanit.springrestwithai.qlkh.qrpayment.VietQrProperties;
+
 @SpringBootApplication
 @EnableScheduling
-@EnableConfigurationProperties(VnptPortalProperties.class)
+@EnableConfigurationProperties({VnptPortalProperties.class, VietQrProperties.class})
 public class SpringRestWithAiApplication {
 
     private static final Logger log = LoggerFactory.getLogger(SpringRestWithAiApplication.class);

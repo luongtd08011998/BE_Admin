@@ -9,7 +9,7 @@ spring:
     primary:
       jdbc-url: jdbc:mysql://localhost:3306/hr_management?allowPublicKeyRetrieval=true&useSSL=false
       username: root
-      password: Kawasaki1
+      password: 1234
       driver-class-name: com.mysql.cj.jdbc.Driver
     # DB thứ 2 (QLKH legacy — customer / monthinvoice / payment). Xem docs/decisions/databaseqlkh.md
     qlkh:
@@ -85,6 +85,16 @@ app:
   water-cutoff:
     employee-name: "Trần Đức Lương"
     employee-phone: "0359423852"
+  api-key: ${QR_API_KEY:capnuoctoctien}
+
+# ── VietQR Payment ──
+vietqr:
+  base-url: https://img.vietqr.io/image
+  bank-id: "970415"
+  account-no: "113601145666"
+  account-name: "CONG TY TNHH CAP NUOC TOC TIEN"
+  template: "tY8MBU9"
+  add-info-prefix: "TOCTIEN"
 
 # VNPT PortalService — SOAP downloadInvErrorFkey (xem news-site/docs/APIFKEY.md).
 # Cấu hình qua biến môi trường (xem .env.example). Map TVAN thường gặp: UserName→VNPT_PORTAL_USERNAME,

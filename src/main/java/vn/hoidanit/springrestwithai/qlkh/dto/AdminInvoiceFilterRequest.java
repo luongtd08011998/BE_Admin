@@ -6,6 +6,7 @@ public class AdminInvoiceFilterRequest {
     private String customerName;
     private String digiCode;
     private Integer remindStatus;
+    private Integer roadId;
 
     public AdminInvoiceFilterRequest() {
     }
@@ -16,6 +17,7 @@ public class AdminInvoiceFilterRequest {
         this.customerName = customerName;
         this.digiCode = digiCode;
         this.remindStatus = remindStatus;
+        this.roadId = null; // optional constructor arg or let default to null
     }
 
     public String getYearMonth() {
@@ -56,5 +58,13 @@ public class AdminInvoiceFilterRequest {
 
     public void setRemindStatus(Integer remindStatus) {
         this.remindStatus = remindStatus;
+    }
+
+    public Integer getRoadId() {
+        return roadId;
+    }
+
+    public void setRoadId(Integer roadId) {
+        this.roadId = roadId;
     }
 }

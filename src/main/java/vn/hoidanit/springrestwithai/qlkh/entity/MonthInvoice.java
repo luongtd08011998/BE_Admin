@@ -62,6 +62,12 @@ public class MonthInvoice {
     @Column(name = "Fkey", length = 36)
     private String fkey;
 
+    @Column(name = "BlankNo")
+    private String blankNo;
+
+    @Column(name = "RoadId")
+    private Integer roadId;
+
     public Integer getMonthInvoiceId() {
         return monthInvoiceId;
     }
@@ -172,5 +178,21 @@ public class MonthInvoice {
 
     public void setFkey(String fkey) {
         this.fkey = fkey;
+    }
+
+    public String getBlankNo() {
+        return blankNo;
+    }
+
+    public void setBlankNo(String blankNo) {
+        this.blankNo = blankNo;
+    }
+
+    public Integer getRoadId() {
+        return roadId;
+    }
+
+    public void setRoadId(Integer roadId) {
+        this.roadId = roadId;
     }
 }

@@ -20,5 +20,6 @@ public record InvoiceResponse(
         Integer oldVal,
         Integer newVal,
         String rootKey,
-        String fkey) {
+        String fkey,
+        String blankNo) {
 }

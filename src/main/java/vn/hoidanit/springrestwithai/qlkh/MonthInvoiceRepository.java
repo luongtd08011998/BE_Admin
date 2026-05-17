@@ -155,11 +155,14 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
                  FROM MonthInvoice m2 
                  WHERE m2.customerId = m.customerId 
                  AND m2.yearMonth = m.yearMonth 
-                 AND (COALESCE(m2.amount, 0) + COALESCE(m2.envFee, 0) + COALESCE(m2.taxFee, 0)) = 0)) 
+                 AND (COALESCE(m2.amount, 0) + COALESCE(m2.envFee, 0) + COALESCE(m2.taxFee, 0)) = 0),
+                m.blankNo,
+                m.roadId) 
             FROM MonthInvoice m, Customer c 
             WHERE m.customerId = c.customerId
             AND (m.fkey IS NOT NULL AND m.fkey <> '')
             AND (:yearMonth IS NULL OR :yearMonth = '' OR m.yearMonth = :yearMonth)
+            AND (:roadId IS NULL OR m.roadId = :roadId)
             AND (:paymentStatus IS NULL OR m.paymentStatus = :paymentStatus)
             AND (:customerName IS NULL OR :customerName = '' OR LOWER(c.name) LIKE LOWER(CONCAT('%', :customerName, '%')))
             AND (:digiCode IS NULL OR :digiCode = '' OR LOWER(c.digiCode) LIKE LOWER(CONCAT('%', :digiCode, '%')))
@@ -176,6 +179,7 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
             @Param("customerName") String customerName,
             @Param("digiCode") String digiCode,
             @Param("remindStatus") Integer remindStatus,
+            @Param("roadId") Integer roadId,
             @Param("remindedIds") java.util.List<Integer> remindedIds,
             @Param("overdueIds") java.util.List<Integer> overdueIds,
             @Param("cutwaterIds") java.util.List<Integer> cutwaterIds,

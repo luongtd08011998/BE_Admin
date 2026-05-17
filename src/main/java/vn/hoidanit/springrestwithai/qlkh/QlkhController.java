@@ -525,7 +525,8 @@ public class QlkhController {
                 inv.getOldVal(),
                 inv.getNewVal(),
                 inv.getRootKey(),
-                inv.getFkey());
+                inv.getFkey(),
+                inv.getBlankNo());
     }
 
     private static String trimEmptyToNull(String s) {
