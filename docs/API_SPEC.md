@@ -1248,38 +1248,463 @@ Upload a single file to the server. The returned `fileName` is then used to upda
 
 ---
 
+## 9. Categories
+
+### GET /categories 🔒
+List categories with pagination & filter.
+**Query:** `page`, `size`, `sort` + filter fields from `CategoryFilterRequest`.
+
+### GET /categories/roots 🔒
+Get root categories (no parent).
+
+### GET /categories/{id} 🔒
+Get category by ID. **Errors:** 404
+
+### POST /categories 🔒
+**Body:** `{ "name": "...", "slug": "...", "active": 1, "parentId": null }`
+**Response (201).** **Errors:** 400 (validation)
+
+### PUT /categories 🔒
+**Body:** `{ "id": 1, "name": "...", "slug": "...", "active": 1, "parentId": null }`
+**Errors:** 400, 404
+
+### DELETE /categories/{id} 🔒
+**Errors:** 404
+
+### GET /categories/search 🔒
+**Query:** `keyword` — search by name.
+
+### GET /categories/parent/{parentId} 🔒
+Direct children of a parent category.
+
+### GET /categories/{id}/children 🔒
+Alias for `/parent/{id}` — same data.
+
+### GET /categories/slug/{slug} 🔒
+Get category by slug. **Errors:** 404
+
+### GET /categories/slug/{slug}/articles 🔒
+Articles under category slug (includes sub-tree). Paginated.
+
+### GET /categories/{id}/tree 🔒
+Category tree starting from ID.
+
+### GET /categories/tree 🔒
+Full category tree. **Query:** `keyword` (optional filter).
+
+### GET /categories/{id}/articles 🔒
+Articles under category tree by ID. Paginated.
+
+**CategoryResponse:**
+```json
+{ "id": 1, "name": "Công nghệ", "slug": "cong-nghe", "active": 1,
+  "parent": { "id": null, "name": null },
+  "createdAt": "...", "updatedAt": "..." }
+```
+
+---
+
+## 10. Documents
+
+### GET /documents 🔒
+List documents with pagination & filter (`DocumentFilterRequest`).
+
+### GET /documents/article/{articleId} 🔒
+All documents attached to an article.
+
+### GET /documents/{id} 🔒
+Get document by ID. **Errors:** 404
+
+### POST /documents 🔒
+**Body:** `{ "title": "...", "description": "...", "documentUrl": "uploads/...", "articleId": 1 }`
+**Response (201).** **Errors:** 400
+
+### PUT /documents 🔒
+**Body:** `{ "id": 1, "title": "...", "description": "...", "documentUrl": "...", "articleId": 1 }`
+**Errors:** 400, 404
+
+### DELETE /documents/{id} 🔒
+**Errors:** 404
+
+**DocumentResponse:**
+```json
+{ "id": 1, "title": "...", "description": "...", "documentUrl": "...",
+  "article": { "id": 1, "title": "..." }, "createdAt": "...", "updatedAt": "..." }
+```
+
+---
+
+## 11. QLKH — Customer Auth
+
+> Base path: `/api/v1/qlkh`
+> Authentication: JWT QLKH (`Authorization: Bearer <token>`) — separate from admin JWT.
+
+### POST /qlkh/auth/login 🔓
+Login by customer code (DigiCode) + phone number.
+**Body:** `{ "digiCode": "KH001", "phone": "0901234567" }`
+**Response (200):**
+```json
+{ "data": { "accessToken": "eyJ...", "refreshToken": "uuid-string" } }
+```
+**Errors:** 404 (customer not found)
+
+### POST /qlkh/auth/refresh 🔓
+Refresh access token using UUID refresh token.
+**Body:** `{ "refreshToken": "uuid-string" }`
+**Response (200):** same as login. **Errors:** 401 (invalid/expired)
+
+### POST /qlkh/auth/logout 🔒QLKH
+Revoke all refresh tokens for the customer.
+**Header:** `Authorization: Bearer <accessToken>`
+**Response (200):** `{ "data": null }`
+
+### GET /qlkh/customers/me 🔒QLKH
+Get current customer info.
+**Response (200):**
+```json
+{ "data": { "digiCode": "KH001", "name": "Nguyễn Văn A",
+  "address": "...", "phone": "...", "email": "...", "sms": "...",
+  "taxCode": "...", "isActive": 1, "isWaterCut": 0 } }
+```
+
+---
+
+## 12. QLKH — Invoices
+
+### GET /qlkh/invoices 🔒QLKH
+List invoices for logged-in customer. Paginated, sorted by yearMonth DESC.
+**Query:** `yearMonth` (optional filter), `page`, `size`
+**InvoiceResponse:**
+```json
+{ "id": 1, "digiCode": "KH001", "customerName": "...", "yearMonth": "202501",
+  "createdDate": "...", "numOfHouseHold": 1, "waterMeterSerial": "...",
+  "amount": 50000, "envFee": 5000, "taxFee": 5000, "totalAmount": 60000,
+  "paymentStatus": 1, "paymentStatusLabel": "Chưa thanh toán",
+  "oldVal": 100, "newVal": 120, "rootKey": "...", "fkey": "...", "blankNo": "..." }
+```
+
+### GET /qlkh/invoices/{invoiceId} 🔒QLKH
+Get invoice detail (must belong to customer). **Errors:** 404
+
+### GET /qlkh/invoices/by-fkey 🔒QLKH
+Lookup invoice by `fkey` param. **Errors:** 400, 404
+
+### GET /qlkh/invoices/by-root-key 🔒QLKH
+Lookup invoice by `rootKey` param. **Errors:** 400, 404
+
+### GET /qlkh/invoices/{invoiceId}/e-invoice-download 🔒QLKH
+Download e-invoice XML/ZIP from VNPT. Returns binary file (attachment).
+**Content-Type:** `application/xml` or `application/zip`. **Errors:** 400, 404
+
+### GET /qlkh/invoices/{invoiceId}/e-invoice-view 🔒QLKH
+View e-invoice data parsed from VNPT HTML.
+**InvoiceViewResponse:**
+```json
+{ "invoiceNo": "...", "invoiceDate": "...", "invoiceType": "...",
+  "sellerName": "...", "buyerName": "...", "totalAmount": "...",
+  "status": "PAID|UNPAID", ... }
+```
+
+### GET /qlkh/invoices/e-invoice-list 🔒QLKH
+List e-invoices from VNPT by customer code. Returns XML.
+**Query:** `fromDate` (dd/MM/yyyy), `toDate` (dd/MM/yyyy)
+
+### GET /qlkh/month-invoices/readings 🔓
+Meter readings by period. No JWT required.
+**Query:** `yearMonth=YYYYMM` OR `fromYearMonth` + `toYearMonth`
+**Response:** `[{ "digiCode": "KH001", "oldVal": 100, "newVal": 120 }]`
+
+### GET /qlkh/sales-invoices 🔒QLKH
+List sales invoices. **Query:** `templateCode` (optional), paginated.
+**SalesInvoiceResponse:**
+```json
+{ "salesInvoiceId": 1, "invoiceNum": "...", "invoiceDate": "...",
+  "templateCode": "...", "digiCode": "...", "customerName": "...",
+  "address": "...", "invoiceTotal": 100000, "status": 1 }
+```
+
+### GET /qlkh/sales-invoices/{salesInvoiceId} 🔒QLKH
+Get sales invoice detail. **Errors:** 404
+
+### GET /qlkh/vnpt/health 🔒QLKH
+Debug VNPT SOAP connection. **Query:** `fkey` (required)
+
+### GET /qlkh/customer/articles/maintenance 🔓
+Articles tagged "BaoTri-CupNuoc". Paginated.
+
+### GET /qlkh/customer/articles/featured 🔓
+Featured articles. Paginated.
+
+---
+
+## 13. QLKH — Notifications
+
+> Base path: `/api/v1/qlkh/customer/notifications`
+
+### GET /qlkh/customer/notifications 🔒QLKH
+List notifications (newest first).
+**Query:** `type` (optional), `excludeType` (optional)
+**NotificationResponse:**
+```json
+{ "id": 1, "customerId": 100, "title": "...", "content": "...",
+  "type": "INVOICE", "isRead": false, "createdAt": "...",
+  "referenceId": 42, "isSystem": false, "url": null }
+```
+
+### GET /qlkh/customer/notifications/unread-count 🔒QLKH
+**Query:** `type`, `excludeType` (optional). **Response:** `{ "data": 5 }`
+
+### POST /qlkh/customer/notifications/read 🔒QLKH
+Mark as read. **Body:** `{ "ids": [1,2,3], "isSystem": false }` — ids null/empty = mark all.
+
+---
+
+## 14. QLKH — Customer Device
+
+> Base path: `/api/v1/qlkh/customer`
+
+### POST /qlkh/customer/device/register 🔒QLKH
+Register FCM device token.
+**Body:** `{ "deviceToken": "fcm-token-string", "platform": "ANDROID|IOS" }`
+
+### POST /qlkh/customer/device/unregister 🔒QLKH
+Unregister FCM device token (on logout).
+**Body:** `{ "deviceToken": "fcm-token-string" }`
+
+---
+
+## 15. QLKH — Customer Feedback
+
+> Base path: `/api/v1/qlkh/customer/feedbacks`
+
+### POST /qlkh/customer/feedbacks 🔒QLKH
+Submit feedback. `multipart/form-data`.
+**Fields:** `issueType`, `location`, `description`, `images`/`image`/`upload_image` (files)
+**Response:** `{ "data": { "trackingCode": "FB-20260517-XXXX" } }`
+
+### GET /qlkh/customer/feedbacks 🔒QLKH
+List customer's own feedbacks.
+```json
+[{ "id": 1, "trackingCode": "...", "issueType": "WATER_LEAK",
+   "location": "...", "description": "...", "status": "PENDING",
+   "images": ["url1"], "createdAt": "..." }]
+```
+
+### GET /qlkh/customer/feedbacks/{id} 🔒QLKH
+Feedback detail with staff replies. **Errors:** 404
+
+---
+
+## 16. Admin — Invoices
+
+> Base path: `/api/v1/admin/invoices`
+
+### GET /admin/invoices 🔒
+List all invoices (admin dashboard). Paginated with filters.
+**Query filters:** `yearMonth`, `paymentStatus`, `customerName`, `digiCode`, `remindStatus`, `roadId`
+**AdminInvoiceResponse:**
+```json
+{ "id": 1, "digiCode": "KH001", "customerName": "...",
+  "totalAmount": 60000, "yearMonth": "202501", "invoiceNo": "...",
+  "fkey": "...", "qrUrl": "https://...", "blankNo": "...", "roadId": 5,
+  "paymentStatus": 1, "isReminded": false, "isOverdue": false,
+  "isWaterCutoff": false, "hasReplacement": false }
+```
+
+### POST /admin/invoices/send-debt-reminder 🔒
+Send debt reminder notifications.
+**Body:** `{ "yearMonth": "202501", "monthInvoiceId": null }`
+**Response:** `{ "data": { "sentCount": 10, "skipCount": 2 } }`
+
+### POST /admin/invoices/send-overdue-reminder 🔒
+Send overdue reminder notifications. Same body/response as debt-reminder.
+
+### POST /admin/invoices/send-water-cutoff 🔒
+Send water cutoff notification for a specific invoice.
+**Body:** `{ "monthInvoiceId": "123", "employeeName": "...", "employeePhone": "..." }`
+**Response:** `{ "data": true }`
+
+---
+
+## 17. Admin — Feedbacks
+
+> Base path: `/api/v1/admin/feedbacks`
+
+### GET /admin/feedbacks/statistics 🔒
+Feedback statistics (counts by status).
+
+### GET /admin/feedbacks 🔒
+List all feedbacks with filters. Paginated.
+**Query:** `keyword`, `status`, `issueType`, `customerSearch`, `createdFrom`, `createdTo`
+
+### GET /admin/feedbacks/{id} 🔒
+Feedback detail with customer info and replies.
+
+### PUT /admin/feedbacks/{id}/status 🔒
+Update feedback status. **Body:** `{ "status": "IN_PROGRESS" }`
+
+### POST /admin/feedbacks/{id}/replies 🔒
+Add staff reply. **Body:** `{ "content": "..." }`
+
+### GET /admin/feedbacks/{id}/replies 🔒
+List replies for a feedback.
+
+---
+
+## 18. Admin — Roads
+
+### GET /admin/roads 🔒
+Get roads for dropdown filter.
+**Response:**
+```json
+{ "data": [{ "id": 1, "name": "Đường ABC", "type": 1 }] }
+```
+
+---
+
+## 19. External — QR Payment
+
+> Base path: `/api/v1/external/qr-payment`
+> Auth: API Key (not JWT)
+
+### POST /external/qr-payment/generate 🔑
+Generate VietQR payment URL.
+**Body:**
+```json
+{ "customerCode": "KH001", "yearMonth": "202501",
+  "amount": 50000, "envFee": 5000, "taxFee": 5000, "fkey": "..." }
+```
+**Response:**
+```json
+{ "data": { "fkey": "...", "customerCode": "KH001", "yearMonth": "202501",
+  "totalAmount": 60000, "qrUrl": "https://img.vietqr.io/...", "addInfo": "..." } }
+```
+**Errors:** 400 (total = 0)
+
+---
+
 ## Endpoint Summary
 
-| Method | Endpoint          | Auth | Description                 |
-| ------ | ----------------- | ---- | --------------------------- |
-| POST   | /auth/login       | 🔓   | Login                       |
-| POST   | /auth/register    | 🔓   | Register                    |
-| POST   | /auth/refresh     | 🔓   | Refresh token               |
-| POST   | /auth/logout      | 🔒   | Logout                      |
-| GET    | /auth/me          | 🔒   | Current user info           |
-| GET    | /users            | 🔒   | List users                  |
-| GET    | /users/{id}       | 🔒   | Get user                    |
-| POST   | /users            | 🔒   | Create user                 |
-| PUT    | /users            | 🔒   | Update user                 |
-| DELETE | /users/{id}       | 🔒   | Delete user                 |
-| GET    | /companies        | 🔒   | List companies              |
-| GET    | /companies/{id}   | 🔒   | Get company                 |
-| POST   | /companies        | 🔒   | Create company              |
-| PUT    | /companies        | 🔒   | Update company              |
-| DELETE | /companies/{id}   | 🔒   | Delete company              |
-| GET    | /roles            | 🔒   | List roles                  |
-| GET    | /roles/{id}       | 🔒   | Get role                    |
-| POST   | /roles            | 🔒   | Create role                 |
-| PUT    | /roles            | 🔒   | Update role                 |
-| DELETE | /roles/{id}       | 🔒   | Delete role                 |
-| GET    | /permissions      | 🔒   | List permissions            |
-| GET    | /permissions/{id} | 🔒   | Get permission              |
-| POST   | /permissions      | 🔒   | Create permission           |
-| PUT    | /permissions      | 🔒   | Update permission           |
-| DELETE | /permissions/{id} | 🔒   | Delete permission           |
-| POST   | /files            | 🔒   | Upload file (avatar / logo) |
-| POST   | /media            | 🔒   | Upload media (image / document) |
-| GET    | /media            | ✅   | List media (paginated, filterable) |
-| GET    | /media/{id}       | ✅   | Get media by ID              |
-| DELETE | /media/{id}       | 🔒   | Delete media                 |
-| GET    | /dashboard        | 🔒   | Dashboard summary counts    |
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| **Auth** | | | |
+| POST | /auth/login | 🔓 | Admin login |
+| POST | /auth/register | 🔓 | Register |
+| POST | /auth/refresh | 🔓 | Refresh token |
+| POST | /auth/logout | 🔒 | Logout |
+| GET | /auth/me | 🔒 | Current admin info |
+| **Users** | | | |
+| GET | /users | 🔒 | List users |
+| GET | /users/{id} | 🔒 | Get user |
+| POST | /users | 🔒 | Create user |
+| PUT | /users | 🔒 | Update user |
+| DELETE | /users/{id} | 🔒 | Delete user |
+| **Companies** | | | |
+| GET | /companies | 🔒 | List companies |
+| GET | /companies/{id} | 🔒 | Get company |
+| POST | /companies | 🔒 | Create company |
+| PUT | /companies | 🔒 | Update company |
+| DELETE | /companies/{id} | 🔒 | Delete company |
+| **Roles** | | | |
+| GET | /roles | 🔒 | List roles |
+| GET | /roles/{id} | 🔒 | Get role |
+| POST | /roles | 🔒 | Create role |
+| PUT | /roles | 🔒 | Update role |
+| DELETE | /roles/{id} | 🔒 | Delete role |
+| **Permissions** | | | |
+| GET | /permissions | 🔒 | List permissions |
+| GET | /permissions/{id} | 🔒 | Get permission |
+| POST | /permissions | 🔒 | Create permission |
+| PUT | /permissions | 🔒 | Update permission |
+| DELETE | /permissions/{id} | 🔒 | Delete permission |
+| **Tags** | | | |
+| GET | /tags | 🔒 | List tags |
+| GET | /tags/{id} | 🔒 | Get tag |
+| POST | /tags | 🔒 | Create tag |
+| PUT | /tags | 🔒 | Update tag |
+| DELETE | /tags/{id} | 🔒 | Delete tag |
+| **Articles** | | | |
+| GET | /articles | 🔒 | List articles |
+| GET | /articles/search | 🔒 | Search articles |
+| GET | /articles/{id} | 🔒 | Get article |
+| POST | /articles | 🔒 | Create article |
+| PUT | /articles | 🔒 | Update article |
+| DELETE | /articles/{id} | 🔒 | Delete article |
+| **Categories** | | | |
+| GET | /categories | 🔒 | List categories |
+| GET | /categories/roots | 🔒 | Root categories |
+| GET | /categories/{id} | 🔒 | Get category |
+| POST | /categories | 🔒 | Create category |
+| PUT | /categories | 🔒 | Update category |
+| DELETE | /categories/{id} | 🔒 | Delete category |
+| GET | /categories/search | 🔒 | Search by name |
+| GET | /categories/parent/{parentId} | 🔒 | Direct children |
+| GET | /categories/{id}/children | 🔒 | Direct children (alias) |
+| GET | /categories/slug/{slug} | 🔒 | Get by slug |
+| GET | /categories/slug/{slug}/articles | 🔒 | Articles by slug |
+| GET | /categories/{id}/tree | 🔒 | Category tree |
+| GET | /categories/tree | 🔒 | Full tree |
+| GET | /categories/{id}/articles | 🔒 | Articles by category tree |
+| **Documents** | | | |
+| GET | /documents | 🔒 | List documents |
+| GET | /documents/article/{articleId} | 🔒 | Docs by article |
+| GET | /documents/{id} | 🔒 | Get document |
+| POST | /documents | 🔒 | Create document |
+| PUT | /documents | 🔒 | Update document |
+| DELETE | /documents/{id} | 🔒 | Delete document |
+| **Files & Media** | | | |
+| POST | /files | 🔒 | Upload file |
+| POST | /media | 🔒 | Upload media |
+| GET | /media | 🔒 | List media |
+| GET | /media/{id} | 🔒 | Get media |
+| DELETE | /media/{id} | 🔒 | Delete media |
+| **Dashboard** | | | |
+| GET | /dashboard | 🔒 | Dashboard summary |
+| **QLKH Auth** | | | |
+| POST | /qlkh/auth/login | 🔓 | Customer login |
+| POST | /qlkh/auth/refresh | 🔓 | Customer refresh token |
+| POST | /qlkh/auth/logout | 🔒Q | Customer logout |
+| GET | /qlkh/customers/me | 🔒Q | Customer info |
+| **QLKH Invoices** | | | |
+| GET | /qlkh/invoices | 🔒Q | List invoices |
+| GET | /qlkh/invoices/{id} | 🔒Q | Get invoice |
+| GET | /qlkh/invoices/by-fkey | 🔒Q | Lookup by fkey |
+| GET | /qlkh/invoices/by-root-key | 🔒Q | Lookup by rootKey |
+| GET | /qlkh/invoices/{id}/e-invoice-download | 🔒Q | Download e-invoice |
+| GET | /qlkh/invoices/{id}/e-invoice-view | 🔒Q | View e-invoice |
+| GET | /qlkh/invoices/e-invoice-list | 🔒Q | List e-invoices (XML) |
+| GET | /qlkh/month-invoices/readings | 🔓 | Meter readings |
+| GET | /qlkh/sales-invoices | 🔒Q | List sales invoices |
+| GET | /qlkh/sales-invoices/{id} | 🔒Q | Get sales invoice |
+| GET | /qlkh/vnpt/health | 🔒Q | VNPT health check |
+| GET | /qlkh/customer/articles/maintenance | 🔓 | Maintenance articles |
+| GET | /qlkh/customer/articles/featured | 🔓 | Featured articles |
+| **QLKH Notifications** | | | |
+| GET | /qlkh/customer/notifications | 🔒Q | List notifications |
+| GET | /qlkh/customer/notifications/unread-count | 🔒Q | Unread count |
+| POST | /qlkh/customer/notifications/read | 🔒Q | Mark as read |
+| **QLKH Device** | | | |
+| POST | /qlkh/customer/device/register | 🔒Q | Register FCM token |
+| POST | /qlkh/customer/device/unregister | 🔒Q | Unregister FCM token |
+| **QLKH Feedback** | | | |
+| POST | /qlkh/customer/feedbacks | 🔒Q | Submit feedback |
+| GET | /qlkh/customer/feedbacks | 🔒Q | List my feedbacks |
+| GET | /qlkh/customer/feedbacks/{id} | 🔒Q | Feedback detail |
+| **Admin Invoices** | | | |
+| GET | /admin/invoices | 🔒 | List invoices (admin) |
+| POST | /admin/invoices/send-debt-reminder | 🔒 | Send debt reminder |
+| POST | /admin/invoices/send-overdue-reminder | 🔒 | Send overdue reminder |
+| POST | /admin/invoices/send-water-cutoff | 🔒 | Send water cutoff |
+| **Admin Feedbacks** | | | |
+| GET | /admin/feedbacks/statistics | 🔒 | Feedback stats |
+| GET | /admin/feedbacks | 🔒 | List feedbacks |
+| GET | /admin/feedbacks/{id} | 🔒 | Feedback detail |
+| PUT | /admin/feedbacks/{id}/status | 🔒 | Update status |
+| POST | /admin/feedbacks/{id}/replies | 🔒 | Add reply |
+| GET | /admin/feedbacks/{id}/replies | 🔒 | List replies |
+| **Admin Roads** | | | |
+| GET | /admin/roads | 🔒 | Roads dropdown |
+| **External** | | | |
+| POST | /external/qr-payment/generate | 🔑 | Generate VietQR |
+
+> **Legend:** 🔓 Public · 🔒 Admin JWT · 🔒Q QLKH JWT · 🔑 API Key

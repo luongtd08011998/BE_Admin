@@ -18,8 +18,9 @@ import java.util.List;
 
 /**
  * API thông báo của khách hàng.
- * GET  /api/v1/qlkh/customer/notifications       — Lấy danh sách thông báo
- * POST /api/v1/qlkh/customer/notifications/read  — Đánh dấu đã đọc
+ * GET  /api/v1/qlkh/customer/notifications            — Lấy danh sách thông báo
+ * GET  /api/v1/qlkh/customer/notifications/unread-count — Số chưa đọc
+ * POST /api/v1/qlkh/customer/notifications/read       — Đánh dấu đã đọc
  */
 @RestController
 @RequestMapping("/api/v1/qlkh/customer/notifications")
@@ -28,16 +29,13 @@ public class NotificationController {
     private final NotificationService notificationService;
     private final JwtDecoder jwtDecoder;
     private final CustomerRepository customerRepository;
-    private final InvoiceNotificationScheduler invoiceNotificationScheduler;
 
     public NotificationController(NotificationService notificationService,
                                   JwtDecoder jwtDecoder,
-                                  CustomerRepository customerRepository,
-                                  InvoiceNotificationScheduler invoiceNotificationScheduler) {
+                                  CustomerRepository customerRepository) {
         this.notificationService = notificationService;
         this.jwtDecoder = jwtDecoder;
         this.customerRepository = customerRepository;
-        this.invoiceNotificationScheduler = invoiceNotificationScheduler;
     }
 
     /**
@@ -82,41 +80,6 @@ public class NotificationController {
         int updated = notificationService.markAsRead(customerId, ids, isSystem);
         return ResponseEntity.ok(ApiResponse.success(
                 "Đánh dấu đã đọc thành công", "Cập nhật " + updated + " thông báo"));
-    }
-
-    /**
-     * API phụ trợ: Bắn thử Push Notification thực tế qua Firebase tới thiết bị của khách hàng.
-     */
-    @GetMapping("/test-push")
-    public ResponseEntity<ApiResponse<String>> testPushFirebase(
-            @RequestHeader("Authorization") String authHeader) {
-
-        Integer customerId = extractCustomerId(authHeader);
-        // Gọi service lưu và bắn push "Hóa đơn mới" (dùng ID 0 cho test)
-        notificationService.sendNewInvoiceNotification(customerId, 0);
-
-        return ResponseEntity.ok(ApiResponse.success(
-                "Đã gọi lệnh bắn Push Notification", "Vui lòng kiểm tra điện thoại của bạn"));
-    }
-
-    /**
-     * Admin: Backfill referenceId cho notification INVOICE/PAYMENT cũ đang bị null.
-     */
-    @PostMapping("/backfill-reference-id")
-    public ResponseEntity<ApiResponse<String>> backfillReferenceId() {
-        int updated = notificationService.backfillNotificationReferenceId();
-        return ResponseEntity.ok(ApiResponse.success(
-                "Backfill hoàn tất", "Đã cập nhật " + updated + " notification"));
-    }
-
-    /**
-     * Admin: Xoá SystemNotification mồ côi (article đã bị xóa).
-     */
-    @PostMapping("/cleanup-orphaned")
-    public ResponseEntity<ApiResponse<String>> cleanupOrphaned() {
-        int deleted = notificationService.cleanupOrphanedSystemNotifications();
-        return ResponseEntity.ok(ApiResponse.success(
-                "Cleanup hoàn tất", "Đã xoá " + deleted + " notification mồ côi"));
     }
 
 

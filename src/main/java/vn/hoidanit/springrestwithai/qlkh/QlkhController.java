@@ -42,6 +42,7 @@ import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
 import vn.hoidanit.springrestwithai.feature.article.ArticleService;
 import vn.hoidanit.springrestwithai.feature.auth.CustomerRefreshToken;
 import vn.hoidanit.springrestwithai.feature.auth.CustomerRefreshTokenRepository;
+import vn.hoidanit.springrestwithai.qlkh.dto.ConsumptionHistoryItemResponse;
 import vn.hoidanit.springrestwithai.qlkh.dto.CustomerLoginRequest;
 import vn.hoidanit.springrestwithai.qlkh.dto.CustomerLoginResponse;
 import vn.hoidanit.springrestwithai.qlkh.dto.InvoiceResponse;
@@ -214,6 +215,29 @@ public class QlkhController {
         }
         throw new IllegalArgumentException(
                 "Chỉ định yearMonth=YYYYMM hoặc fromYearMonth=YYYYMM và toYearMonth=YYYYMM (đủ 6 chữ số)");
+    }
+
+    /**
+     * Lịch sử tiêu thụ nước của 1 khách hàng trong khoảng thời gian.
+     * Dùng cho biểu đồ tiêu thụ 6 tháng trên mobile — chỉ trả về đúng khách hàng đó.
+     */
+    @GetMapping("/month-invoices/consumption-history")
+    public ResponseEntity<ApiResponse<List<ConsumptionHistoryItemResponse>>> getConsumptionHistory(
+            @RequestParam String customerCode,
+            @RequestParam String fromYearMonth,
+            @RequestParam String toYearMonth) {
+        String code = customerCode != null ? customerCode.trim() : "";
+        if (code.isEmpty()) {
+            throw new IllegalArgumentException("Tham số customerCode không được để trống");
+        }
+        requireValidYearMonth(fromYearMonth, "fromYearMonth");
+        requireValidYearMonth(toYearMonth, "toYearMonth");
+        if (fromYearMonth.compareTo(toYearMonth) > 0) {
+            throw new IllegalArgumentException("fromYearMonth phải nhỏ hơn hoặc bằng toYearMonth");
+        }
+        List<ConsumptionHistoryItemResponse> rows =
+                monthInvoiceRepository.findConsumptionHistory(code, fromYearMonth, toYearMonth);
+        return ResponseEntity.ok(ApiResponse.success("Lấy lịch sử tiêu thụ thành công", rows));
     }
 
     /**

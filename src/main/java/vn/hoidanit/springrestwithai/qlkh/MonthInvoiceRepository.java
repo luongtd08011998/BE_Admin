@@ -12,8 +12,26 @@ import vn.hoidanit.springrestwithai.qlkh.entity.MonthInvoice;
 import java.util.List;
 import java.util.Optional;
 
+import vn.hoidanit.springrestwithai.qlkh.dto.ConsumptionHistoryItemResponse;
+
 @Repository
 public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Integer> {
+
+    @Query("""
+            SELECT NEW vn.hoidanit.springrestwithai.qlkh.dto.ConsumptionHistoryItemResponse(
+                m.yearMonth, m.oldVal, m.newVal,
+                CASE WHEN m.newVal IS NOT NULL AND m.oldVal IS NOT NULL
+                     THEN (m.newVal - m.oldVal) ELSE NULL END)
+            FROM MonthInvoice m
+            JOIN Customer c ON m.customerId = c.customerId
+            WHERE c.digiCode = :digiCode
+            AND m.yearMonth >= :fromYm AND m.yearMonth <= :toYm
+            ORDER BY m.yearMonth ASC
+            """)
+    List<ConsumptionHistoryItemResponse> findConsumptionHistory(
+            @Param("digiCode") String digiCode,
+            @Param("fromYm") String fromYearMonth,
+            @Param("toYm") String toYearMonth);
 
     Optional<MonthInvoice> findByCustomerIdAndFkey(Integer customerId, String fkey);
 

@@ -3,14 +3,11 @@ package vn.hoidanit.springrestwithai.qlkh.qrpayment;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class VietQrService {
 
     private final VietQrProperties props;
-    private final Map<String, String> cache = new ConcurrentHashMap<>();
     private static final char[] HEX = "0123456789ABCDEF".toCharArray();
 
     public VietQrService(VietQrProperties props) {
@@ -23,20 +20,25 @@ public class VietQrService {
     public String buildQrUrl(String digiCode, String yearMonth, double totalAmount) {
         if (totalAmount <= 0) return null;
         long amount = Math.round(totalAmount);
-        String key = digiCode + ":" + yearMonth + ":" + amount;
         
-        return cache.computeIfAbsent(key, k -> {
-            String addInfo = (props.getAddInfoPrefix()
-                + " " + nullToEmpty(digiCode)
-                + " " + nullToEmpty(yearMonth)).trim();
-            String base = String.format("%s/%s-%s-%s.png",
-                props.getBaseUrl(), props.getBankId(),
-                props.getAccountNo(), props.getTemplate());
-            return base
-                + "?amount=" + amount
-                + "&addInfo=" + percentEncode(addInfo)
-                + "&accountName=" + percentEncode(props.getAccountName());
-        });
+        String addInfo = generateAddInfo(digiCode, yearMonth);
+        String base = String.format("%s/%s-%s-%s.png",
+            props.getBaseUrl(), props.getBankId(),
+            props.getAccountNo(), props.getTemplate());
+        
+        return base
+            + "?amount=" + amount
+            + "&addInfo=" + percentEncode(addInfo)
+            + "&accountName=" + percentEncode(props.getAccountName());
+    }
+
+    /**
+     * Generate standard addInfo string.
+     */
+    public String generateAddInfo(String digiCode, String yearMonth) {
+        return (props.getAddInfoPrefix()
+            + " " + nullToEmpty(digiCode)
+            + " " + nullToEmpty(yearMonth)).trim();
     }
 
     /** Overload: tính tổng từ 3 thành phần. */

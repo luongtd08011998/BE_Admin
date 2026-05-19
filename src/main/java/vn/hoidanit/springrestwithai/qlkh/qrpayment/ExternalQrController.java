@@ -37,9 +37,7 @@ public class ExternalQrController {
                 .body(ApiResponse.badRequest("Tổng tiền phải > 0"));
         }
 
-        String addInfo = (vietQrService.getAddInfoPrefix()
-            + " " + request.customerCode().trim()
-            + " " + request.yearMonth().trim()).trim();
+        String addInfo = vietQrService.generateAddInfo(request.customerCode(), request.yearMonth());
 
         QrPaymentExternalResponse resp = new QrPaymentExternalResponse(
             request.fkey(), request.customerCode(), request.yearMonth(),
