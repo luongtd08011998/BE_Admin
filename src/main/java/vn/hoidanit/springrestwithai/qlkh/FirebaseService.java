@@ -14,7 +14,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import vn.hoidanit.springrestwithai.feature.log.SystemLogService;
-import vn.hoidanit.springrestwithai.qlkh.dto.FCMBatchResult;
+import vn.hoidanit.springrestwithai.qlkh.notification.dto.FCMBatchResult;
 
 import java.util.ArrayList;
 import java.util.Collections;

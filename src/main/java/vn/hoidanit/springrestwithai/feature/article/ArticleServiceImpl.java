@@ -21,7 +21,7 @@ import vn.hoidanit.springrestwithai.feature.tag.Tag;
 import vn.hoidanit.springrestwithai.feature.tag.TagRepository;
 import vn.hoidanit.springrestwithai.feature.user.User;
 import vn.hoidanit.springrestwithai.feature.user.UserRepository;
-import vn.hoidanit.springrestwithai.qlkh.NotificationService;
+import vn.hoidanit.springrestwithai.qlkh.notification.NotificationService;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;

@@ -1,0 +1,97 @@
+package vn.hoidanit.springrestwithai.qlkh.invoice.dto;
+
+public class InvoiceInfoDTO {
+    private Integer customerId;
+    private Integer monthInvoiceId;
+    private String yearMonth;
+    private String digiCode;
+    private String customerName;
+    private Double amount;
+    private String address;
+    private Boolean hasReplacement;
+
+    public InvoiceInfoDTO(Integer customerId, Integer monthInvoiceId, String yearMonth, String digiCode, String customerName, Double amount, Boolean hasReplacement) {
+        this.customerId = customerId;
+        this.monthInvoiceId = monthInvoiceId;
+        this.yearMonth = yearMonth;
+        this.digiCode = digiCode;
+        this.customerName = customerName;
+        this.amount = amount;
+        this.hasReplacement = hasReplacement;
+    }
+
+    public InvoiceInfoDTO(Integer customerId, Integer monthInvoiceId, String yearMonth, String digiCode, String customerName, Double amount, String address, Boolean hasReplacement) {
+        this.customerId = customerId;
+        this.monthInvoiceId = monthInvoiceId;
+        this.yearMonth = yearMonth;
+        this.digiCode = digiCode;
+        this.customerName = customerName;
+        this.amount = amount;
+        this.address = address;
+        this.hasReplacement = hasReplacement;
+    }
+
+    public Integer getCustomerId() {
+        return customerId;
+    }
+
+    public void setCustomerId(Integer customerId) {
+        this.customerId = customerId;
+    }
+
+    public Integer getMonthInvoiceId() {
+        return monthInvoiceId;
+    }
+
+    public void setMonthInvoiceId(Integer monthInvoiceId) {
+        this.monthInvoiceId = monthInvoiceId;
+    }
+
+    public String getYearMonth() {
+        return yearMonth;
+    }
+
+    public void setYearMonth(String yearMonth) {
+        this.yearMonth = yearMonth;
+    }
+
+    public String getDigiCode() {
+        return digiCode;
+    }
+
+    public void setDigiCode(String digiCode) {
+        this.digiCode = digiCode;
+    }
+
+    public String getCustomerName() {
+        return customerName;
+    }
+
+    public void setCustomerName(String customerName) {
+        this.customerName = customerName;
+    }
+
+    public Double getAmount() {
+        return amount;
+    }
+
+    public void setAmount(Double amount) {
+        this.amount = amount;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public Boolean getHasReplacement() {
+        return hasReplacement;
+    }
+
+    public void setHasReplacement(Boolean hasReplacement) {
+        this.hasReplacement = hasReplacement;
+    }
+}

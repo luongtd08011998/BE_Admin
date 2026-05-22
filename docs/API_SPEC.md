@@ -1414,6 +1414,42 @@ Meter readings by period. No JWT required.
 **Query:** `yearMonth=YYYYMM` OR `fromYearMonth` + `toYearMonth`
 **Response:** `[{ "digiCode": "KH001", "oldVal": 100, "newVal": 120 }]`
 
+### GET /qlkh/month-invoices/consumption-history 🔓
+Water consumption history for a single customer over a time range. No JWT required.
+Designed for mobile app chart — replaces 6 separate calls to `/readings`.
+**Query Parameters:**
+| Param | Required | Format | Description |
+|-------|----------|--------|-------------|
+| `customerCode` | yes | string | Customer DigiCode |
+| `fromYearMonth` | yes | yyyyMM | Start month |
+| `toYearMonth` | yes | yyyyMM | End month |
+
+**Success Response (200):**
+```json
+{
+  "statusCode": 200,
+  "message": "Lấy lịch sử tiêu thụ thành công",
+  "data": [
+    { "yearMonth": "202601", "oldVal": 150, "newVal": 165, "consumptionM3": 15 },
+    { "yearMonth": "202602", "oldVal": 165, "newVal": 180, "consumptionM3": 15 },
+    { "yearMonth": "202603", "oldVal": 180, "newVal": 195, "consumptionM3": 15 },
+    { "yearMonth": "202604", "oldVal": 195, "newVal": null, "consumptionM3": null }
+  ]
+}
+```
+
+**Notes:**
+- `consumptionM3` = `newVal - oldVal`, calculated server-side. `null` if either value is missing.
+- Months with no data are omitted from the array.
+- `fromYearMonth` must be ≤ `toYearMonth`.
+
+**Errors:**
+| Status | When |
+|--------|------|
+| 400 | Missing or empty `customerCode` |
+| 400 | `fromYearMonth` or `toYearMonth` not in yyyyMM format |
+| 400 | `fromYearMonth` > `toYearMonth` |
+
 ### GET /qlkh/sales-invoices 🔒QLKH
 List sales invoices. **Query:** `templateCode` (optional), paginated.
 **SalesInvoiceResponse:**
@@ -1674,6 +1710,7 @@ Generate VietQR payment URL.
 | GET | /qlkh/invoices/{id}/e-invoice-view | 🔒Q | View e-invoice |
 | GET | /qlkh/invoices/e-invoice-list | 🔒Q | List e-invoices (XML) |
 | GET | /qlkh/month-invoices/readings | 🔓 | Meter readings |
+| GET | /qlkh/month-invoices/consumption-history | 🔓 | Consumption history for 1 customer |
 | GET | /qlkh/sales-invoices | 🔒Q | List sales invoices |
 | GET | /qlkh/sales-invoices/{id} | 🔒Q | Get sales invoice |
 | GET | /qlkh/vnpt/health | 🔒Q | VNPT health check |

@@ -16,9 +16,9 @@ import vn.hoidanit.springrestwithai.feature.feedback.entity.FeedbackStatus;
 import vn.hoidanit.springrestwithai.feature.feedback.entity.IssueType;
 import vn.hoidanit.springrestwithai.feature.user.User;
 import vn.hoidanit.springrestwithai.feature.user.UserRepository;
-import vn.hoidanit.springrestwithai.qlkh.CustomerRepository;
-import vn.hoidanit.springrestwithai.qlkh.NotificationService;
-import vn.hoidanit.springrestwithai.qlkh.entity.Customer;
+import vn.hoidanit.springrestwithai.qlkh.customer.CustomerRepository;
+import vn.hoidanit.springrestwithai.qlkh.notification.NotificationService;
+import vn.hoidanit.springrestwithai.qlkh.customer.Customer;
 
 import java.time.LocalDateTime;
 import java.util.*;

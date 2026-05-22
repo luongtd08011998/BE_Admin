@@ -6,7 +6,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 
-import vn.hoidanit.springrestwithai.qlkh.dto.InvoiceViewResponse;
+import vn.hoidanit.springrestwithai.qlkh.invoice.dto.InvoiceViewResponse;
 
 @Component
 public class VnptInvoiceHtmlParser {
