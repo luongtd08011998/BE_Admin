@@ -6,12 +6,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.transaction.annotation.Transactional;
 import vn.hoidanit.springrestwithai.feature.notification.CustomerDeviceRepository;
 import vn.hoidanit.springrestwithai.feature.notification.NotificationRepository;
 import vn.hoidanit.springrestwithai.feature.notification.NotifiedInvoiceRepository;
 import vn.hoidanit.springrestwithai.feature.notification.NotifiedPaymentRepository;
 import vn.hoidanit.springrestwithai.feature.notification.entity.CustomerDevice;
+import vn.hoidanit.springrestwithai.feature.notification.entity.DeliveryStatus;
 import vn.hoidanit.springrestwithai.feature.notification.entity.Notification;
 import vn.hoidanit.springrestwithai.feature.notification.entity.NotifiedInvoice;
 import vn.hoidanit.springrestwithai.feature.notification.entity.NotifiedPayment;
@@ -76,6 +78,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final TokenCleanupService tokenCleanupService;
     private final ArticleRepository articleRepository;
     private final MonthInvoiceRepository monthInvoiceRepository;
+    private final NotificationServiceImpl self;
 
     public NotificationServiceImpl(CustomerDeviceRepository customerDeviceRepository,
                                NotificationRepository notificationRepository,
@@ -86,7 +89,8 @@ public class NotificationServiceImpl implements NotificationService {
                                FirebaseService firebaseService,
                                TokenCleanupService tokenCleanupService,
                                ArticleRepository articleRepository,
-                               MonthInvoiceRepository monthInvoiceRepository) {
+                               MonthInvoiceRepository monthInvoiceRepository,
+                               @Lazy NotificationServiceImpl self) {
         this.customerDeviceRepository = customerDeviceRepository;
         this.notificationRepository = notificationRepository;
         this.notifiedInvoiceRepository = notifiedInvoiceRepository;
@@ -97,6 +101,7 @@ public class NotificationServiceImpl implements NotificationService {
         this.tokenCleanupService = tokenCleanupService;
         this.articleRepository = articleRepository;
         this.monthInvoiceRepository = monthInvoiceRepository;
+        this.self = self;
     }
 
     // ─── Device Token ───────────────────────────────────────────────────────
@@ -619,6 +624,7 @@ public class NotificationServiceImpl implements NotificationService {
             notification.setReferenceId(referenceId);
         }
         notificationRepository.save(notification);
+        Long notificationId = notification.getId();
 
         // 2. Gửi FCM đến tất cả devices
         List<String> tokens = customerDeviceRepository.findByCustomerId(customerId)
@@ -628,6 +634,7 @@ public class NotificationServiceImpl implements NotificationService {
 
         if (tokens.isEmpty()) {
             log.debug("No devices registered for customerId={}. Notification saved but no push sent.", customerId);
+            self.updateDeliveryStatus(notificationId, DeliveryStatus.NO_DEVICE, null);
             return;
         }
 
@@ -641,14 +648,42 @@ public class NotificationServiceImpl implements NotificationService {
         try {
             firebaseService.sendToMultipleTokensWithDataAsync(tokens, title, content, data)
                     .thenAccept(result -> {
-                        if (result != null && !result.invalidTokens().isEmpty()) {
-                            tokenCleanupService.cleanupInvalidTokens(result.invalidTokens());
+                        if (result != null) {
+                            DeliveryStatus status;
+                            if (result.successCount() > 0 && result.failureCount() == 0) {
+                                status = DeliveryStatus.DELIVERED;
+                            } else if (result.successCount() > 0) {
+                                status = DeliveryStatus.PARTIAL;
+                            } else {
+                                status = DeliveryStatus.FAILED;
+                            }
+                            self.updateDeliveryStatus(notificationId, status, null);
+                            if (!result.invalidTokens().isEmpty()) {
+                                tokenCleanupService.cleanupInvalidTokens(result.invalidTokens());
+                            }
                         }
+                    })
+                    .exceptionally(ex -> {
+                        self.updateDeliveryStatus(notificationId, DeliveryStatus.FAILED, ex.getMessage());
+                        return null;
                     });
         } catch (Exception e) {
             log.error("Failed to send FCM push to customerId={} (tokens: {}): {}",
                     customerId, tokens.size(), e.getMessage());
-            // KHÔNG throw lỗi ra ngoài để Transaction vẫn được commit
+            notification.setDeliveryStatus(DeliveryStatus.FAILED);
+            notification.setFailureReason(e.getMessage());
+        }
+    }
+
+    @Transactional(value = "primaryTransactionManager")
+    public void updateDeliveryStatus(Long notificationId, DeliveryStatus status, String failureReason) {
+        try {
+            notificationRepository.updateDeliveryStatus(notificationId, status,
+                    status == DeliveryStatus.DELIVERED || status == DeliveryStatus.PARTIAL
+                            ? java.time.LocalDateTime.now() : null,
+                    failureReason);
+        } catch (Exception e) {
+            log.warn("Could not update delivery status for notificationId={}: {}", notificationId, e.getMessage());
         }
     }
 

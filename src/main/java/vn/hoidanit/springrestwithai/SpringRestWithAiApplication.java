@@ -10,14 +10,12 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.scheduling.annotation.EnableAsync;
-import org.springframework.scheduling.annotation.EnableScheduling;
 
 import vn.hoidanit.springrestwithai.qlkh.vnpt.VnptPortalProperties;
 
 import vn.hoidanit.springrestwithai.qlkh.qrpayment.VietQrProperties;
 
 @SpringBootApplication
-@EnableScheduling
 @EnableConfigurationProperties({VnptPortalProperties.class, VietQrProperties.class})
 public class SpringRestWithAiApplication {
 

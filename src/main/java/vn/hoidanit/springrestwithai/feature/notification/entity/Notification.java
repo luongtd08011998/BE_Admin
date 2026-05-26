@@ -38,6 +38,16 @@ public class Notification {
     @Column(name = "is_read")
     private Boolean isRead = false;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "delivery_status", length = 20)
+    private DeliveryStatus deliveryStatus = DeliveryStatus.PENDING;
+
+    @Column(name = "delivered_at")
+    private LocalDateTime deliveredAt;
+
+    @Column(name = "failure_reason", length = 500)
+    private String failureReason;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -45,6 +55,7 @@ public class Notification {
     void prePersist() {
         if (createdAt == null) createdAt = LocalDateTime.now();
         if (isRead == null) isRead = false;
+        if (deliveryStatus == null) deliveryStatus = DeliveryStatus.PENDING;
     }
 
     // --- Getters & Setters ---
@@ -80,4 +91,16 @@ public class Notification {
     public LocalDateTime getCreatedAt() { return createdAt; }
 
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public DeliveryStatus getDeliveryStatus() { return deliveryStatus; }
+
+    public void setDeliveryStatus(DeliveryStatus deliveryStatus) { this.deliveryStatus = deliveryStatus; }
+
+    public LocalDateTime getDeliveredAt() { return deliveredAt; }
+
+    public void setDeliveredAt(LocalDateTime deliveredAt) { this.deliveredAt = deliveredAt; }
+
+    public String getFailureReason() { return failureReason; }
+
+    public void setFailureReason(String failureReason) { this.failureReason = failureReason; }
 }

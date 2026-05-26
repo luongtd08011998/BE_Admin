@@ -146,6 +146,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/qlkh/customer/notifications/**").authenticated()
                         .requestMatchers("/api/v1/qlkh/customer/feedbacks/**").authenticated()
                         .requestMatchers("/api/v1/admin/logs").authenticated()
+                        .requestMatchers("/api/v1/admin/notifications/**").authenticated()
                         .anyRequest().access(permissionAuthorizationManager))
 
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {

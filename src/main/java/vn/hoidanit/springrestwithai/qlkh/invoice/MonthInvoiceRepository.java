@@ -106,6 +106,32 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
             @Param("datePrefix") String datePrefix, Pageable pageable);
 
     /**
+     * Quét gia tăng hóa đơn theo ngày + ID — chỉ lấy hóa đơn có monthInvoiceId > minId.
+     * Dùng cho InvoiceNotificationScheduler để tránh quét lại toàn bộ mỗi lần chạy.
+     */
+    @Query("""
+            SELECT new vn.hoidanit.springrestwithai.qlkh.invoice.dto.InvoiceInfoDTO(
+                m.customerId, m.monthInvoiceId, m.yearMonth, c.digiCode, c.name,
+                (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0)),
+                c.address,
+                (SELECT CASE WHEN COUNT(m2) > 0 THEN true ELSE false END
+                 FROM MonthInvoice m2
+                 WHERE m2.customerId = m.customerId
+                 AND m2.yearMonth = m.yearMonth
+                 AND (COALESCE(m2.amount, 0) + COALESCE(m2.envFee, 0) + COALESCE(m2.taxFee, 0)) = 0)
+            )
+            FROM MonthInvoice m
+            JOIN Customer c ON m.customerId = c.customerId
+            WHERE m.createdDate LIKE CONCAT(:datePrefix, '%')
+            AND m.monthInvoiceId > :minId
+            ORDER BY m.monthInvoiceId ASC
+            """)
+    List<vn.hoidanit.springrestwithai.qlkh.invoice.dto.InvoiceInfoDTO> findNewInvoicesByDatePrefix(
+            @Param("datePrefix") String datePrefix,
+            @Param("minId") Integer minId,
+            Pageable pageable);
+
+    /**
      * Lấy hóa đơn đã thanh toán kèm thông tin KH — dành cho PaymentNotificationScheduler.
      * KHÔNG dùng NOT IN — filter bằng Java thay vì SQL để tránh query quá lớn.
      */
@@ -215,8 +241,29 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
             )
             FROM MonthInvoice m
             JOIN Customer c ON m.customerId = c.customerId
+            WHERE m.customerId = :customerId
+            AND m.yearMonth = :yearMonth
+            """)
+    java.util.List<vn.hoidanit.springrestwithai.qlkh.invoice.dto.InvoiceInfoDTO> findInvoiceInfoByCustomerAndYearMonth(
+            @Param("customerId") Integer customerId,
+            @Param("yearMonth") String yearMonth);
+
+    @Query("""
+            SELECT new vn.hoidanit.springrestwithai.qlkh.invoice.dto.InvoiceInfoDTO(
+                m.customerId, m.monthInvoiceId, m.yearMonth, c.digiCode, c.name,
+                (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0)),
+                c.address,
+                (SELECT CASE WHEN COUNT(m2) > 0 THEN true ELSE false END
+                 FROM MonthInvoice m2
+                 WHERE m2.customerId = m.customerId
+                 AND m2.yearMonth = m.yearMonth
+                 AND (COALESCE(m2.amount, 0) + COALESCE(m2.envFee, 0) + COALESCE(m2.taxFee, 0)) = 0)
+            )
+            FROM MonthInvoice m
+            JOIN Customer c ON m.customerId = c.customerId
             WHERE m.yearMonth = :yearMonth
             AND m.paymentStatus = 1
             """)
     java.util.List<vn.hoidanit.springrestwithai.qlkh.invoice.dto.InvoiceInfoDTO> findUnpaidInvoiceDTOsByYearMonth(@Param("yearMonth") String yearMonth);
 }
+
