@@ -36,7 +36,7 @@ public class QlkhDataSourceConfig {
         factory.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
         Map<String, Object> props = new HashMap<>();
         props.put("hibernate.hbm2ddl.auto", "none");
-        props.put("hibernate.show_sql", "true");
+        props.put("hibernate.show_sql", "false");
         props.put("hibernate.dialect", "org.hibernate.dialect.MySQLDialect");
         factory.setJpaPropertyMap(props);
         return factory;

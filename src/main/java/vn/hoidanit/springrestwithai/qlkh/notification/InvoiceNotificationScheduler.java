@@ -2,6 +2,7 @@ package vn.hoidanit.springrestwithai.qlkh.notification;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -13,14 +14,14 @@ import vn.hoidanit.springrestwithai.qlkh.invoice.dto.InvoiceInfoDTO;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import vn.hoidanit.springrestwithai.qlkh.invoice.SalesInvoiceRepository;
 import vn.hoidanit.springrestwithai.qlkh.invoice.MonthInvoiceRepository;
 
 /**
  * Cron Job quét hóa đơn mới và gửi Push Notification tự động.
  *
- * <p>Chạy mỗi 2 phút (cấu hình qua {@code app.invoice-notify.cron}).
+ * <p>Chạy mỗi 5 phút (cấu hình qua {@code app.invoice-notify.cron}).
  * Logic:
  * <ol>
  *   <li>Lấy danh sách hóa đơn được tạo trong ngày hôm nay từ DB qlkh.</li>
@@ -37,19 +38,22 @@ public class InvoiceNotificationScheduler {
     private final MonthInvoiceRepository monthInvoiceRepository;
     private final NotificationService notificationService;
     private final vn.hoidanit.springrestwithai.feature.notification.NotifiedInvoiceRepository notifiedInvoiceRepository;
+    private final InvoiceNotificationScheduler self;
 
     public InvoiceNotificationScheduler(MonthInvoiceRepository monthInvoiceRepository,
                                         NotificationService notificationService,
-                                        vn.hoidanit.springrestwithai.feature.notification.NotifiedInvoiceRepository notifiedInvoiceRepository) {
+                                        vn.hoidanit.springrestwithai.feature.notification.NotifiedInvoiceRepository notifiedInvoiceRepository,
+                                        @Lazy InvoiceNotificationScheduler self) {
         this.monthInvoiceRepository = monthInvoiceRepository;
         this.notificationService = notificationService;
         this.notifiedInvoiceRepository = notifiedInvoiceRepository;
+        this.self = self;
     }
 
     /**
-     * Cron Job tự động — chạy mỗi 2 phút (cấu hình qua app.invoice-notify.cron).
+     * Cron Job tự động — chạy mỗi 5 phút (cấu hình qua app.invoice-notify.cron).
      */
-    @Scheduled(cron = "${app.invoice-notify.cron:0 */2 * * * *}", zone = "Asia/Ho_Chi_Minh")
+    @Scheduled(cron = "${app.invoice-notify.cron:0 */5 * * * *}", zone = "Asia/Ho_Chi_Minh")
     public void checkAndNotifyNewInvoices() {
         checkAndNotifyNewInvoices(null);
     }
@@ -59,45 +63,41 @@ public class InvoiceNotificationScheduler {
      * @param datePrefix Prefix ngày để query (ví dụ "2026-04-23", "2026-04", "20260423").
      *                   Nếu null → dùng ngày hôm nay định dạng "yyyyMMdd".
      */
-    @Transactional("qlkhTransactionManager")
     public void checkAndNotifyNewInvoices(String datePrefix) {
         String queryDate = (datePrefix != null && !datePrefix.isBlank())
                 ? datePrefix.trim()
                 : LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 
-        log.debug("[InvoiceNotify] Bắt đầu quét hóa đơn với datePrefix='{}'", queryDate);
+        log.info("[InvoiceNotify] Bắt đầu quét hóa đơn với datePrefix='{}'", queryDate);
 
         int pageNum = 0;
-        int pageSize = 500;
+        int pageSize = 100;
         AtomicInteger sentCount = new AtomicInteger(0);
         AtomicInteger skipCount = new AtomicInteger(0);
 
         while (true) {
-            Pageable pageable = PageRequest.of(pageNum, pageSize);
-            Page<InvoiceInfoDTO> invoicePage = monthInvoiceRepository.findInvoiceInfoByCreatedDatePrefix(queryDate, pageable);
-
-            if (invoicePage.isEmpty()) {
+            log.info("[InvoiceNotify] Đọc page {} (size={})...", pageNum, pageSize);
+            // Đọc 1 page từ QLKH — transaction ngắn, trả connection ngay
+            List<InvoiceInfoDTO> invoices = self.fetchInvoicePage(queryDate, pageNum, pageSize);
+            if (invoices == null || invoices.isEmpty()) {
                 if (pageNum == 0) {
-                    log.debug("[InvoiceNotify] Không có hóa đơn nào với datePrefix='{}' — kết thúc.", queryDate);
+                    log.info("[InvoiceNotify] Không có hóa đơn nào với datePrefix='{}' — kết thúc.", queryDate);
                 }
                 break;
             }
 
-            List<InvoiceInfoDTO> invoices = invoicePage.getContent();
+            log.info("[InvoiceNotify] Page {} có {} hóa đơn.", pageNum, invoices.size());
 
-            // Tối ưu N+1: Lấy danh sách tất cả ID hóa đơn trong cụm
+            // Kiểm tra đã gửi chưa — transaction ngắn trên PRIMARY
             List<Integer> allIds = invoices.stream().map(InvoiceInfoDTO::getMonthInvoiceId).toList();
-
-            // Lấy danh sách các ID đã được thông báo từ database primary
-            List<Integer> notifiedIds = notifiedInvoiceRepository.findNotifiedInvoiceIds(allIds);
-            java.util.Set<Integer> notifiedSet = new java.util.HashSet<>(notifiedIds);
-
+            Set<Integer> notifiedSet = self.fetchAlreadyNotifiedIds(allIds);
             skipCount.addAndGet(notifiedSet.size());
 
-            invoices.forEach(invoice -> {
-                // Bỏ qua nếu đã gửi rồi
+            // Gửi notification — KHÔNG giữ transaction, mỗi sendAndMark có transaction riêng
+            int idx = 0;
+            for (InvoiceInfoDTO invoice : invoices) {
                 if (notifiedSet.contains(invoice.getMonthInvoiceId())) {
-                    return;
+                    continue;
                 }
 
                 try {
@@ -111,12 +111,15 @@ public class InvoiceNotificationScheduler {
                             invoice.getAddress()
                     );
                     if (sent) sentCount.incrementAndGet();
+                    idx++;
+                    if (idx % 50 == 0) {
+                        log.info("[InvoiceNotify] Đã gửi {}/{} hóa đơn trên page {}.", idx, invoices.size(), pageNum);
+                    }
                 } catch (Exception e) {
                     log.error("[InvoiceNotify] Lỗi khi gửi thông báo cho invoiceId={}: {}",
                             invoice.getMonthInvoiceId(), e.getMessage(), e);
                 }
-            });
-
+            }
             pageNum++;
         }
 
@@ -126,5 +129,18 @@ public class InvoiceNotificationScheduler {
             log.info(msg);
             businessLogger.info("TYPE: NOTIFICATION_SUMMARY | ACTION: INVOICE_NOTIFY | STATUS: SUCCESS | MSG: {}", msg);
         }
+    }
+
+    @Transactional(value = "qlkhTransactionManager", readOnly = true)
+    public List<InvoiceInfoDTO> fetchInvoicePage(String queryDate, int pageNum, int pageSize) {
+        Pageable pageable = PageRequest.of(pageNum, pageSize);
+        Page<InvoiceInfoDTO> invoicePage = monthInvoiceRepository.findInvoiceInfoByCreatedDatePrefix(queryDate, pageable);
+        return invoicePage.getContent();
+    }
+
+    @Transactional(value = "primaryTransactionManager", readOnly = true)
+    public Set<Integer> fetchAlreadyNotifiedIds(List<Integer> allIds) {
+        List<Integer> notifiedIds = notifiedInvoiceRepository.findNotifiedInvoiceIds(allIds);
+        return new java.util.HashSet<>(notifiedIds);
     }
 }

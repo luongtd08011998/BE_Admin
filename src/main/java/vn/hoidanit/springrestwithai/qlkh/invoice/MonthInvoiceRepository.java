@@ -107,7 +107,7 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
 
     /**
      * Lấy hóa đơn đã thanh toán kèm thông tin KH — dành cho PaymentNotificationScheduler.
-     * LOẠI TRỪ những invoice đã được thông báo.
+     * KHÔNG dùng NOT IN — filter bằng Java thay vì SQL để tránh query quá lớn.
      */
     @Query("""
             SELECT new vn.hoidanit.springrestwithai.qlkh.invoice.dto.InvoiceInfoDTO(
@@ -124,11 +124,9 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
             JOIN Customer c ON m.customerId = c.customerId
             WHERE m.paymentStatus = 2
             AND m.yearMonth >= :fromYearMonth
-            AND m.monthInvoiceId NOT IN :excludeIds
             """)
-    Page<vn.hoidanit.springrestwithai.qlkh.invoice.dto.InvoiceInfoDTO> findPaidInvoiceInfoExcluding(
+    Page<vn.hoidanit.springrestwithai.qlkh.invoice.dto.InvoiceInfoDTO> findPaidInvoiceInfo(
             @Param("fromYearMonth") String fromYearMonth,
-            @Param("excludeIds") List<Integer> excludeIds,
             Pageable pageable);
 
     /**

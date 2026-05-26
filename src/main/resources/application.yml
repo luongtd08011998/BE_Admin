@@ -9,14 +9,28 @@ spring:
     primary:
       jdbc-url: jdbc:mysql://localhost:3306/hr_management?allowPublicKeyRetrieval=true&useSSL=false
       username: root
-      password: 1234
+      password: Kawasaki1
       driver-class-name: com.mysql.cj.jdbc.Driver
+      hikari:
+        maximum-pool-size: 20
+        minimum-idle: 5
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        leak-detection-threshold: 60000
     # DB thứ 2 (QLKH legacy — customer / monthinvoice / payment). Xem docs/decisions/databaseqlkh.md
     qlkh:
       jdbc-url: jdbc:mysql://103.15.51.97:3306/cm_20211018?allowPublicKeyRetrieval=true&useSSL=false&characterEncoding=UTF-8
       username: luongtd
       password: 1234
       driver-class-name: com.mysql.cj.jdbc.Driver
+      hikari:
+        maximum-pool-size: 10
+        minimum-idle: 3
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        leak-detection-threshold: 60000
     # qlkh:
     #   jdbc-url: jdbc:mysql://localhost:3306/cm_20211018?allowPublicKeyRetrieval=true&useSSL=false&characterEncoding=UTF-8
     #   username: root
@@ -25,7 +39,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
   servlet:
     multipart:
       max-file-size: 10MB
@@ -73,13 +87,13 @@ app:
       - media
   seed-data: true
   # Lịch chạy Cron Job gửi thông báo hóa đơn mới
-  # "0 */2 * * * *" = mỗi 2 phút quét 1 lần
+  # "0 */5 * * * *" = mỗi 5 phút quét 1 lần
   invoice-notify:
-    cron: "0 */2 * * * *"
+    cron: "0 */5 * * * *"
   # Lịch chạy Cron Job phát hiện hóa đơn vừa thanh toán và gửi thông báo
-  # "0 */2 * * * *" = mỗi 2 phút quét 1 lần (lệch 1 phút so với invoice để tránh tranh chấp)
+  # "0 */1 * * * *" = mỗi 1 phút — gần realtime cho thanh toán
   payment-notify:
-    cron: "0 1/2 * * * *"
+    cron: "0 */1 * * * *"
   company-name: "CNTOCTIEN"
   hotline: "02543 894 894"
   water-cutoff:

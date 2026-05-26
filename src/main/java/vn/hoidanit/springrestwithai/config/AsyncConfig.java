@@ -12,9 +12,9 @@ import java.util.concurrent.Executor;
 /**
  * Cấu hình thread pool cho các tác vụ bất đồng bộ (FCM push notification).
  *
- * <p>Core pool = 5, max = 10 thread đồng thời → gửi song song 10 FCM call thay vì tuần tự.
- * Queue capacity = 500 → đệm đủ cho burst lớn (8.000 KH/tháng).
- * Nếu queue đầy → CallerRunsPolicy → thread gọi sẽ tự gửi (không mất message).
+ * <p>Core pool = 20, max = 50 thread đồng thời → gửi song song nhiều FCM call.
+ * Queue capacity = 5000 → đệm đủ cho burst lớn (8.000 KH/tháng).
+ * CallerRunsPolicy bị bỏ → dùng DiscardPolicy để không block scheduler thread.
  */
 @Configuration
 @EnableAsync
@@ -25,13 +25,13 @@ public class AsyncConfig {
     @Bean(name = "fcmTaskExecutor")
     public Executor fcmTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(5);
-        executor.setMaxPoolSize(10);
-        executor.setQueueCapacity(500);
+        executor.setCorePoolSize(20);
+        executor.setMaxPoolSize(50);
+        executor.setQueueCapacity(5000);
         executor.setThreadNamePrefix("fcm-push-");
-        executor.setRejectedExecutionHandler(new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setRejectedExecutionHandler(new java.util.concurrent.ThreadPoolExecutor.DiscardPolicy());
         executor.initialize();
-        log.info("FCM async thread pool initialized: core=5, max=10, queue=500");
+        log.info("FCM async thread pool initialized: core=20, max=50, queue=5000");
         return executor;
     }
 }
