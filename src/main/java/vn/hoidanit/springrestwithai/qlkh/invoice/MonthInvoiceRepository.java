@@ -228,6 +228,9 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
             @Param("cutwaterIds") java.util.List<Integer> cutwaterIds,
             Pageable pageable);
 
+    @Query("SELECT DISTINCT m.customerId FROM MonthInvoice m WHERE m.roadId = :roadId")
+    List<Integer> findDistinctCustomerIdsByRoadId(@Param("roadId") Integer roadId);
+
     @Query("""
             SELECT new vn.hoidanit.springrestwithai.qlkh.invoice.dto.InvoiceInfoDTO(
                 m.customerId, m.monthInvoiceId, m.yearMonth, c.digiCode, c.name,

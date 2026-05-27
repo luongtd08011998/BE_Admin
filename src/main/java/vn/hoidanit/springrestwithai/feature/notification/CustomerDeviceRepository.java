@@ -23,4 +23,13 @@ public interface CustomerDeviceRepository extends JpaRepository<CustomerDevice, 
     @Modifying
     @Query("DELETE FROM CustomerDevice cd WHERE cd.deviceToken IN :tokens")
     int deleteByDeviceTokenIn(@Param("tokens") List<String> deviceTokens);
+
+    @Query("SELECT DISTINCT cd.customerId FROM CustomerDevice cd")
+    List<Integer> findAllRegisteredCustomerIds();
+
+    @Query("SELECT cd.customerId, cd.platform FROM CustomerDevice cd WHERE cd.customerId IN :customerIds")
+    List<Object[]> findPlatformsByCustomerIds(@Param("customerIds") List<Integer> customerIds);
+
+    @Query("SELECT cd.customerId, COUNT(cd), MAX(cd.createdAt) FROM CustomerDevice cd WHERE cd.customerId IN :customerIds GROUP BY cd.customerId")
+    List<Object[]> findDeviceStatsByCustomerIds(@Param("customerIds") List<Integer> customerIds);
 }
