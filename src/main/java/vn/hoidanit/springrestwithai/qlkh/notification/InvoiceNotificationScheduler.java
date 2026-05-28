@@ -17,6 +17,9 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -38,6 +41,7 @@ public class InvoiceNotificationScheduler {
     private static final Logger log = LoggerFactory.getLogger(InvoiceNotificationScheduler.class);
     private static final Logger businessLogger = LoggerFactory.getLogger("BUSINESS_ACTIVITY");
     private static final int BATCH_SIZE = 100;
+    private final ExecutorService notifyExecutor = Executors.newFixedThreadPool(10);
 
     private final MonthInvoiceRepository monthInvoiceRepository;
     private final NotificationService notificationService;
@@ -103,29 +107,50 @@ public class InvoiceNotificationScheduler {
                     invoices.stream().map(InvoiceInfoDTO::getMonthInvoiceId).toList());
             skipCount.addAndGet(notifiedSet.size());
 
-            for (InvoiceInfoDTO invoice : invoices) {
-                if (notifiedSet.contains(invoice.getMonthInvoiceId())) {
-                    continue;
-                }
-                try {
-                    boolean sent = notificationService.sendAndMarkInvoiceNotification(
-                            invoice.getMonthInvoiceId(),
-                            invoice.getCustomerId(),
-                            invoice.getYearMonth(),
-                            invoice.getDigiCode(),
-                            invoice.getCustomerName(),
-                            invoice.getAmount(),
-                            invoice.getAddress()
-                    );
-                    if (sent) sentCount.incrementAndGet();
-                } catch (Exception e) {
-                    log.error("[InvoiceNotify] Lỗi khi gửi thông báo cho invoiceId={}: {}",
-                            invoice.getMonthInvoiceId(), e.getMessage(), e);
-                }
+            // Xử lý song song — gửi tất cả, thu thập kết quả rồi cập nhật mốc
+            List<CompletableFuture<InvoiceInfoDTO>> futures = invoices.stream()
+                    .map(invoice -> CompletableFuture.supplyAsync(() -> {
+                        if (notifiedSet.contains(invoice.getMonthInvoiceId())) {
+                            return invoice;
+                        }
+                        try {
+                            boolean sent = notificationService.sendAndMarkInvoiceNotification(
+                                    invoice.getMonthInvoiceId(),
+                                    invoice.getCustomerId(),
+                                    invoice.getYearMonth(),
+                                    invoice.getDigiCode(),
+                                    invoice.getCustomerName(),
+                                    invoice.getAmount(),
+                                    invoice.getAddress()
+                            );
+                            if (sent) sentCount.incrementAndGet();
+                        } catch (Exception e) {
+                            log.error("[InvoiceNotify] Lỗi khi gửi thông báo cho invoiceId={}: {}",
+                                    invoice.getMonthInvoiceId(), e.getMessage(), e);
+                            return null; // null = lỗi, không cập nhật mốc
+                        }
+                        return invoice;
+                    }, notifyExecutor))
+                    .toList();
+
+            // Đợi tất cả hoàn thành (tối đa 120 giây)
+            try {
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                        .get(120, java.util.concurrent.TimeUnit.SECONDS);
+            } catch (Exception e) {
+                log.error("[InvoiceNotify] Timeout khi gửi thông báo song song: {}", e.getMessage());
             }
 
-            // Cập nhật mốc tới ID lớn nhất trong batch
-            maxProcessedId = invoices.get(invoices.size() - 1).getMonthInvoiceId();
+            // Cập nhật mốc tới ID lớn nhất xử lý thành công liên tục từ đầu
+            for (CompletableFuture<InvoiceInfoDTO> f : futures) {
+                try {
+                    InvoiceInfoDTO result = f.get();
+                    if (result == null) break; // gặp lỗi → dừng cập nhật mốc
+                    maxProcessedId = result.getMonthInvoiceId();
+                } catch (Exception e) {
+                    break; // lỗi → dừng
+                }
+            }
         }
 
         // 4. Lưu mốc mới nhất (atomic update)

@@ -7,5 +7,6 @@ public record NotificationAdminFilterRequest(
         String deliveryStatus,
         Integer customerId,
         LocalDateTime createdFrom,
-        LocalDateTime createdTo
+        LocalDateTime createdTo,
+        Integer roadId
 ) {}

@@ -11,6 +11,7 @@ import vn.hoidanit.springrestwithai.feature.notification.entity.DeliveryStatus;
 import vn.hoidanit.springrestwithai.feature.notification.entity.Notification;
 import vn.hoidanit.springrestwithai.qlkh.FirebaseService;
 import vn.hoidanit.springrestwithai.qlkh.customer.CustomerRepository;
+import vn.hoidanit.springrestwithai.qlkh.invoice.MonthInvoiceRepository;
 import vn.hoidanit.springrestwithai.qlkh.notification.admin.dto.NotificationAdminFilterRequest;
 import vn.hoidanit.springrestwithai.qlkh.notification.admin.dto.NotificationAdminResponse;
 import vn.hoidanit.springrestwithai.qlkh.notification.admin.dto.NotificationStatisticsResponse;
@@ -20,6 +21,7 @@ import vn.hoidanit.springrestwithai.feature.notification.entity.CustomerDevice;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,24 +30,38 @@ public class NotificationAdminServiceImpl implements NotificationAdminService {
     private final NotificationRepository notificationRepository;
     private final CustomerRepository customerRepository;
     private final CustomerDeviceRepository customerDeviceRepository;
+    private final MonthInvoiceRepository monthInvoiceRepository;
     private final FirebaseService firebaseService;
 
     public NotificationAdminServiceImpl(NotificationRepository notificationRepository,
                                         CustomerRepository customerRepository,
                                         CustomerDeviceRepository customerDeviceRepository,
+                                        MonthInvoiceRepository monthInvoiceRepository,
                                         FirebaseService firebaseService) {
         this.notificationRepository = notificationRepository;
         this.customerRepository = customerRepository;
         this.customerDeviceRepository = customerDeviceRepository;
+        this.monthInvoiceRepository = monthInvoiceRepository;
         this.firebaseService = firebaseService;
     }
 
     @Override
     public ResultPaginationDTO getNotifications(NotificationAdminFilterRequest filter, Pageable pageable) {
+        List<Integer> customerIdsByRoad = null;
+        if (filter.roadId() != null) {
+            customerIdsByRoad = monthInvoiceRepository.findDistinctCustomerIdsByRoadId(filter.roadId());
+            if (customerIdsByRoad.isEmpty()) {
+                return new ResultPaginationDTO(
+                        new ResultPaginationDTO.Meta(pageable.getPageNumber() + 1, pageable.getPageSize(), 0, 0),
+                        Collections.emptyList());
+            }
+        }
+
         Page<Notification> page = notificationRepository.findAll(
                 NotificationSpecification.withFilters(
                         filter.type(), filter.deliveryStatus(),
-                        filter.customerId(), filter.createdFrom(), filter.createdTo()
+                        filter.customerId(), customerIdsByRoad,
+                        filter.createdFrom(), filter.createdTo()
                 ), pageable);
 
         // Batch resolve customer names

@@ -15,6 +15,9 @@ import vn.hoidanit.springrestwithai.dto.ResultPaginationDTO;
 import vn.hoidanit.springrestwithai.qlkh.invoiceadmin.dto.AdminInvoiceFilterRequest;
 import vn.hoidanit.springrestwithai.qlkh.invoiceadmin.dto.DebtReminderResponse;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/admin/invoices")
 public class InvoiceAdminController {
@@ -92,5 +95,15 @@ public class InvoiceAdminController {
 
         boolean sent = invoiceAdminService.sendWaterCutoff(monthInvoiceId, employeeName, employeePhone);
         return ResponseEntity.ok(ApiResponse.success("Gửi thông báo cúp nước thành công", sent));
+    }
+
+    @PostMapping("/send-invoice-notification")
+    public ResponseEntity<ApiResponse<DebtReminderResponse>> sendInvoiceNotification(@RequestBody Map<String, List<Integer>> request) {
+        List<Integer> monthInvoiceIds = request.get("monthInvoiceIds");
+        if (monthInvoiceIds == null || monthInvoiceIds.isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResponse.badRequest("Vui lòng cung cấp monthInvoiceIds"));
+        }
+        DebtReminderResponse response = invoiceAdminService.sendInvoiceNotification(monthInvoiceIds);
+        return ResponseEntity.ok(ApiResponse.success("Gửi thông báo hóa đơn thành công", response));
     }
 }

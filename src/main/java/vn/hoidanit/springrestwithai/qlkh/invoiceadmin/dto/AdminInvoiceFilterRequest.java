@@ -7,6 +7,7 @@ public class AdminInvoiceFilterRequest {
     private String digiCode;
     private Integer remindStatus;
     private Integer roadId;
+    private Integer invoiceNotifyStatus;
 
     public AdminInvoiceFilterRequest() {
     }
@@ -66,5 +67,13 @@ public class AdminInvoiceFilterRequest {
 
     public void setRoadId(Integer roadId) {
         this.roadId = roadId;
+    }
+
+    public Integer getInvoiceNotifyStatus() {
+        return invoiceNotifyStatus;
+    }
+
+    public void setInvoiceNotifyStatus(Integer invoiceNotifyStatus) {
+        this.invoiceNotifyStatus = invoiceNotifyStatus;
     }
 }

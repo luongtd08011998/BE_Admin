@@ -13,6 +13,7 @@ public class AdminInvoiceResponse {
     private Boolean isReminded;
     private Boolean isOverdue;
     private Boolean isWaterCutoff;
+    private Boolean isInvoiceNotified;
     private Boolean hasReplacement;
 
     private String fkey;
@@ -32,6 +33,7 @@ public class AdminInvoiceResponse {
         this.isReminded = false;
         this.isOverdue = false;
         this.isWaterCutoff = false;
+        this.isInvoiceNotified = false;
         this.hasReplacement = hasReplacement;
         this.blankNo = blankNo;
         this.roadId = roadId;
@@ -123,6 +125,14 @@ public class AdminInvoiceResponse {
 
     public void setIsWaterCutoff(Boolean isWaterCutoff) {
         this.isWaterCutoff = isWaterCutoff;
+    }
+
+    public Boolean getIsInvoiceNotified() {
+        return isInvoiceNotified;
+    }
+
+    public void setIsInvoiceNotified(Boolean isInvoiceNotified) {
+        this.isInvoiceNotified = isInvoiceNotified;
     }
 
     public Boolean getHasReplacement() {

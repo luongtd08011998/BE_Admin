@@ -13,4 +13,8 @@ public interface NotifiedInvoiceRepository extends JpaRepository<NotifiedInvoice
     /** Lấy danh sách ID các hóa đơn đã được thông báo từ một danh sách đầu vào */
     @org.springframework.data.jpa.repository.Query("SELECT n.monthInvoiceId FROM NotifiedInvoice n WHERE n.monthInvoiceId IN :ids")
     java.util.List<Integer> findNotifiedInvoiceIds(@org.springframework.data.repository.query.Param("ids") java.util.List<Integer> ids);
+
+    /** Lấy tất cả monthInvoiceId đã gửi thông báo INVOICE */
+    @org.springframework.data.jpa.repository.Query("SELECT n.monthInvoiceId FROM NotifiedInvoice n")
+    java.util.List<Integer> findAllNotifiedMonthInvoiceIds();
 }

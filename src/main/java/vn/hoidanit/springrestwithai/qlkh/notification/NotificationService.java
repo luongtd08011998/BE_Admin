@@ -23,6 +23,7 @@ public interface NotificationService {
     List<Long> findAllRemindedInvoiceIds();
     List<Long> findAllOverdueInvoiceIds();
     List<Long> findAllCutwaterInvoiceIds();
+    List<Integer> findAllInvoiceNotifiedIds();
     void broadcastSystemNotification(String title, String content, String type, Long referenceId);
     boolean sendAndMarkInvoiceNotification(Integer monthInvoiceId, Integer customerId, String yearMonth, String digiCode, String customerName, Double amount, String address);
     boolean sendAndMarkPaymentNotification(Integer monthInvoiceId, Integer customerId, String yearMonth, String digiCode, String customerName, Double amount, String address);

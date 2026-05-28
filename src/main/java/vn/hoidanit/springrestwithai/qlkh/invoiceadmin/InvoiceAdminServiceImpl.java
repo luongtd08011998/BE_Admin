@@ -64,6 +64,7 @@ public class InvoiceAdminServiceImpl implements InvoiceAdminService {
         String digiCode = (filter != null) ? filter.getDigiCode() : null;
         Integer remindStatus = (filter != null) ? filter.getRemindStatus() : null;
         Integer roadId = (filter != null) ? filter.getRoadId() : null;
+        Integer invoiceNotifyStatus = (filter != null) ? filter.getInvoiceNotifyStatus() : null;
 
         // Fetch all reminded invoice IDs from Notification table
         java.util.List<Long> remindedLongIds = notificationService.findAllRemindedInvoiceIds();
@@ -83,19 +84,25 @@ public class InvoiceAdminServiceImpl implements InvoiceAdminService {
         java.util.List<Integer> cutwaterIds = cutwaterLongIds.stream().map(Long::intValue).toList();
         if (cutwaterIds.isEmpty()) cutwaterIds = java.util.List.of(-1);
 
-        Page<AdminInvoiceResponse> page = monthInvoiceRepository.findAdminInvoices(yearMonth, paymentStatus, customerName, digiCode, remindStatus, roadId, remindedIds, overdueIds, cutwaterIds, pageable);
+        // Fetch invoice notified IDs (INVOICE type from cron job)
+        java.util.List<Integer> invoiceNotifiedIds = notificationService.findAllInvoiceNotifiedIds();
+        if (invoiceNotifiedIds.isEmpty()) invoiceNotifiedIds = java.util.List.of(-1);
+
+        Page<AdminInvoiceResponse> page = monthInvoiceRepository.findAdminInvoices(yearMonth, paymentStatus, customerName, digiCode, remindStatus, roadId, remindedIds, overdueIds, cutwaterIds, invoiceNotifiedIds, invoiceNotifyStatus, pageable);
 
         // Gọi VNPT song song cho tất cả hóa đơn trong trang hiện tại
         List<AdminInvoiceResponse> content = page.getContent();
         
-        // Map isReminded, isOverdue, isWaterCutoff boolean
+        // Map isReminded, isOverdue, isWaterCutoff, isInvoiceNotified boolean
         java.util.Set<Integer> remindedSet = new java.util.HashSet<>(remindedIds);
         java.util.Set<Integer> overdueSet = new java.util.HashSet<>(overdueIds);
         java.util.Set<Integer> cutwaterSet = new java.util.HashSet<>(cutwaterIds);
+        java.util.Set<Integer> invoiceNotifiedSet = new java.util.HashSet<>(invoiceNotifiedIds);
         for (AdminInvoiceResponse res : content) {
             res.setIsReminded(remindedSet.contains(res.getId()));
             res.setIsOverdue(overdueSet.contains(res.getId()));
             res.setIsWaterCutoff(cutwaterSet.contains(res.getId()));
+            res.setIsInvoiceNotified(invoiceNotifiedSet.contains(res.getId()));
             
             if (res.getPaymentStatus() != null && res.getPaymentStatus() != 2
                     && res.getTotalAmount() != null && res.getTotalAmount() > 0) {
@@ -246,6 +253,69 @@ public class InvoiceAdminServiceImpl implements InvoiceAdminService {
                 employeeName,
                 employeePhone);
         return true;
+    }
+
+    @Override
+    public DebtReminderResponse sendInvoiceNotification(List<Integer> monthInvoiceIds) {
+        if (monthInvoiceIds == null || monthInvoiceIds.isEmpty()) {
+            return new DebtReminderResponse(0, 0);
+        }
+
+        List<MonthInvoice> invoices = monthInvoiceRepository.findAllById(monthInvoiceIds);
+        if (invoices.isEmpty()) {
+            return new DebtReminderResponse(0, 0);
+        }
+
+        // Lọc bỏ hóa đơn đã gửi thông báo (tránh trùng)
+        List<Integer> requestedIds = invoices.stream().map(MonthInvoice::getMonthInvoiceId).toList();
+        java.util.Set<Integer> alreadyNotified = new java.util.HashSet<>(
+                notificationService.findAllInvoiceNotifiedIds().stream()
+                        .filter(requestedIds::contains)
+                        .toList());
+
+        java.util.concurrent.atomic.AtomicInteger sentCount = new java.util.concurrent.atomic.AtomicInteger(0);
+        int skipCount = (int) invoices.stream().filter(inv -> alreadyNotified.contains(inv.getMonthInvoiceId())).count();
+
+        List<MonthInvoice> toSend = invoices.stream()
+                .filter(inv -> !alreadyNotified.contains(inv.getMonthInvoiceId()))
+                .filter(inv -> inv.getCustomerId() != null)
+                .toList();
+
+        List<CompletableFuture<Void>> futures = toSend.stream()
+                .<CompletableFuture<Void>>map(inv -> CompletableFuture.runAsync(() -> {
+                    try {
+                        var customer = customerRepository.findById(inv.getCustomerId()).orElse(null);
+                        String digiCode = customer != null ? customer.getDigiCode() : "";
+                        String customerName = customer != null ? customer.getName() : "";
+                        String address = customer != null ? customer.getAddress() : "";
+                        Double totalAmount = (double) (
+                                (inv.getAmount() != null ? inv.getAmount() : 0)
+                                + (inv.getEnvFee() != null ? inv.getEnvFee() : 0)
+                                + (inv.getTaxFee() != null ? inv.getTaxFee() : 0));
+
+                        notificationService.sendAndMarkInvoiceNotification(
+                                inv.getMonthInvoiceId(),
+                                inv.getCustomerId(),
+                                inv.getYearMonth(),
+                                digiCode,
+                                customerName,
+                                totalAmount,
+                                address);
+                        sentCount.incrementAndGet();
+                    } catch (Exception e) {
+                        log.error("Lỗi khi gửi thông báo hóa đơn cho invoiceId={}: {}", inv.getMonthInvoiceId(), e.getMessage());
+                    }
+                }, notificationExecutor))
+                .toList();
+
+        try {
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                    .get(120, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.error("Timeout hoặc lỗi khi gửi thông báo hóa đơn song song: {}", e.getMessage());
+        }
+
+        return new DebtReminderResponse(sentCount.get(), skipCount + (toSend.size() - sentCount.get()));
     }
 
 }

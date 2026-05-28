@@ -404,6 +404,10 @@ public class NotificationServiceImpl implements NotificationService {
         return notificationRepository.findAllCutwaterInvoiceIds();
     }
 
+    public List<Integer> findAllInvoiceNotifiedIds() {
+        return notifiedInvoiceRepository.findAllNotifiedMonthInvoiceIds();
+    }
+
     /**
      * Gửi thông báo hệ thống (FCM Topic)
      */

@@ -214,6 +214,9 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
                  OR (:remindStatus = 0 AND m.monthInvoiceId NOT IN :remindedIds)
                  OR (:remindStatus = 2 AND m.monthInvoiceId IN :overdueIds)
                  OR (:remindStatus = 3 AND m.monthInvoiceId IN :cutwaterIds))
+            AND (:invoiceNotifyStatus IS NULL
+                 OR (:invoiceNotifyStatus = 1 AND m.monthInvoiceId IN :invoiceNotifiedIds)
+                 OR (:invoiceNotifyStatus = 0 AND m.monthInvoiceId NOT IN :invoiceNotifiedIds))
             ORDER BY m.yearMonth DESC, m.monthInvoiceId DESC
             """)
     Page<vn.hoidanit.springrestwithai.qlkh.invoiceadmin.dto.AdminInvoiceResponse> findAdminInvoices(
@@ -226,6 +229,8 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
             @Param("remindedIds") java.util.List<Integer> remindedIds,
             @Param("overdueIds") java.util.List<Integer> overdueIds,
             @Param("cutwaterIds") java.util.List<Integer> cutwaterIds,
+            @Param("invoiceNotifiedIds") java.util.List<Integer> invoiceNotifiedIds,
+            @Param("invoiceNotifyStatus") Integer invoiceNotifyStatus,
             Pageable pageable);
 
     @Query("SELECT DISTINCT m.customerId FROM MonthInvoice m WHERE m.roadId = :roadId")

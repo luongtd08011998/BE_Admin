@@ -12,7 +12,7 @@ import java.util.List;
 public class NotificationSpecification {
 
     public static Specification<Notification> withFilters(String type, String deliveryStatus,
-                                                          Integer customerId,
+                                                          Integer customerId, List<Integer> customerIds,
                                                           LocalDateTime createdFrom, LocalDateTime createdTo) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -25,6 +25,9 @@ public class NotificationSpecification {
             }
             if (customerId != null) {
                 predicates.add(cb.equal(root.get("customerId"), customerId));
+            }
+            if (customerIds != null && !customerIds.isEmpty()) {
+                predicates.add(root.get("customerId").in(customerIds));
             }
             if (createdFrom != null) {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), createdFrom));
