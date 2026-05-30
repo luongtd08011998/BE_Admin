@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import vn.hoidanit.springrestwithai.feature.article.Article;
@@ -34,6 +35,7 @@ import vn.hoidanit.springrestwithai.util.constant.GenderEnum;
  * Skips if data already exists (checks user count).
  */
 @Component
+@Order(1)
 @ConditionalOnProperty(name = "app.seed-data", havingValue = "true")
 public class DatabaseSeeder implements CommandLineRunner {
 

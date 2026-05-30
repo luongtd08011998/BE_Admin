@@ -18,7 +18,7 @@ import java.util.Map;
 
 @Configuration
 @EnableJpaRepositories(
-        basePackages = "vn.hoidanit.springrestwithai.feature",
+        basePackages = {"vn.hoidanit.springrestwithai.feature", "vn.hoidanit.springrestwithai.qlk"},
         entityManagerFactoryRef = "primaryEntityManagerFactory",
         transactionManagerRef = "primaryTransactionManager"
 )
@@ -42,7 +42,7 @@ public class PrimaryDataSourceConfig {
     public LocalContainerEntityManagerFactoryBean primaryEntityManagerFactory() {
         LocalContainerEntityManagerFactoryBean factory = new LocalContainerEntityManagerFactoryBean();
         factory.setDataSource(primaryDataSource());
-        factory.setPackagesToScan("vn.hoidanit.springrestwithai.feature");
+        factory.setPackagesToScan("vn.hoidanit.springrestwithai.feature", "vn.hoidanit.springrestwithai.qlk");
         factory.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
         Map<String, Object> props = new HashMap<>();
         String ddlAuto = environment.getProperty("spring.jpa.hibernate.ddl-auto", "update");

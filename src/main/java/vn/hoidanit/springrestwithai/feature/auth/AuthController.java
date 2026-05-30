@@ -75,7 +75,8 @@ public class AuthController {
             throw new InvalidTokenException("Refresh token không được cung cấp");
         }
 
-        LoginResponse loginResponse = authService.refresh(rawRefreshToken);
+        Long warehouseId = body != null ? body.warehouseId() : null;
+        LoginResponse loginResponse = authService.refresh(rawRefreshToken, warehouseId);
         setRefreshTokenCookie(httpResponse, loginResponse.refreshToken());
 
         return ResponseEntity.ok(ApiResponse.success("Token đã được làm mới", loginResponse));

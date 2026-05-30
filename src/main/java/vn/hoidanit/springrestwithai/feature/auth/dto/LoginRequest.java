@@ -9,6 +9,8 @@ public record LoginRequest(
         String email,
 
         @NotBlank(message = "Mật khẩu không được để trống")
-        String password
+        String password,
+        
+        Long warehouseId
 ) {
 }

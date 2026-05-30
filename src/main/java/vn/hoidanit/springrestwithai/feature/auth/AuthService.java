@@ -12,7 +12,7 @@ public interface AuthService {
 
     RegisterResponse register(RegisterRequest request);
 
-    LoginResponse refresh(String rawRefreshToken);
+    LoginResponse refresh(String rawRefreshToken, Long warehouseId);
 
     void logout(String rawRefreshToken);
 

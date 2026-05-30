@@ -87,6 +87,11 @@ public class UserServiceImpl implements UserService {
 
         user.setName(request.name());
         user.setEmail(request.email());
+        
+        if (request.password() != null && !request.password().trim().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(request.password()));
+        }
+
         user.setAge(request.age());
         user.setAddress(request.address());
         user.setGender(request.gender());

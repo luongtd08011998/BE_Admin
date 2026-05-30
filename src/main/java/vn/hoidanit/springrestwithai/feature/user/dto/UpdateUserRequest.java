@@ -22,6 +22,8 @@ public record UpdateUserRequest(
 
         @Size(max = 255, message = "Địa chỉ không được quá 255 ký tự") String address,
 
+        @Size(min = 6, message = "Mật khẩu phải có ít nhất 6 ký tự") String password,
+
         GenderEnum gender,
 
         String avatar,

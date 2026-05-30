@@ -85,6 +85,7 @@ app:
       - thumbnails
       - feedbacks
       - media
+      - materials
   seed-data: true
   # Lịch chạy Cron Job gửi thông báo hóa đơn mới
   # "0 */5 * * * *" = mỗi 5 phút quét 1 lần

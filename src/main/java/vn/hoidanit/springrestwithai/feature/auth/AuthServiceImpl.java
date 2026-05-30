@@ -26,6 +26,9 @@ import vn.hoidanit.springrestwithai.feature.auth.dto.RegisterResponse;
 import vn.hoidanit.springrestwithai.feature.user.User;
 import vn.hoidanit.springrestwithai.feature.user.UserRepository;
 import vn.hoidanit.springrestwithai.feature.user.dto.UserResponse;
+import vn.hoidanit.springrestwithai.qlk.warehouse.WarehouseRepository;
+import vn.hoidanit.springrestwithai.qlk.warehouse.WarehouseUserRepository;
+import vn.hoidanit.springrestwithai.exception.BadRequestException;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -44,6 +47,8 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
+    private final WarehouseRepository warehouseRepository;
+    private final WarehouseUserRepository warehouseUserRepository;
 
     @Value("${jwt.access-token-expiration}")
     private long accessTokenExpiration;
@@ -55,12 +60,16 @@ public class AuthServiceImpl implements AuthService {
             JwtEncoder jwtEncoder,
             UserRepository userRepository,
             RefreshTokenRepository refreshTokenRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            WarehouseRepository warehouseRepository,
+            WarehouseUserRepository warehouseUserRepository) {
         this.authenticationManager = authenticationManager;
         this.jwtEncoder = jwtEncoder;
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
+        this.warehouseRepository = warehouseRepository;
+        this.warehouseUserRepository = warehouseUserRepository;
     }
 
     @Override
@@ -75,13 +84,30 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Người dùng", "email", request.email()));
 
-        String rawAccessToken = generateAccessToken(authentication, user.getId());
+        // Validate warehouse access
+        boolean isSuperAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN"));
+
+        Long warehouseId = request.warehouseId();
+        if (warehouseId != null) {
+            if (!warehouseRepository.existsById(warehouseId)) {
+                throw new ResourceNotFoundException("Kho", "id", warehouseId.toString());
+            }
+            if (!isSuperAdmin) {
+                boolean hasAccess = warehouseUserRepository.existsByWarehouseIdAndUserId(warehouseId, user.getId());
+                if (!hasAccess) {
+                    throw new BadRequestException("Tài khoản không có quyền truy cập kho này");
+                }
+            }
+        }
+
+        String rawAccessToken = generateAccessToken(authentication, user.getId(), warehouseId);
         String rawRefreshToken = generateRefreshToken(user.getId(), user.getEmail());
 
         saveRefreshToken(rawRefreshToken, user, deviceInfo, ipAddress);
 
         log.info("Người dùng đăng nhập thành công: {}", user.getEmail());
-        return new LoginResponse(rawAccessToken, rawRefreshToken);
+        return new LoginResponse(rawAccessToken, rawRefreshToken, warehouseId);
     }
 
     @Override
@@ -106,7 +132,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public LoginResponse refresh(String rawRefreshToken) {
+    public LoginResponse refresh(String rawRefreshToken, Long warehouseId) {
         String tokenHash = hashToken(rawRefreshToken);
 
         RefreshToken storedToken = refreshTokenRepository.findByToken(tokenHash)
@@ -125,17 +151,32 @@ public class AuthServiceImpl implements AuthService {
 
         User user = storedToken.getUser();
 
+        boolean isSuperAdmin = user.getRoles().stream()
+                .anyMatch(r -> r.getName().equals("SUPER_ADMIN"));
+
+        if (warehouseId != null) {
+            if (!warehouseRepository.existsById(warehouseId)) {
+                throw new ResourceNotFoundException("Kho", "id", warehouseId.toString());
+            }
+            if (!isSuperAdmin) {
+                boolean hasAccess = warehouseUserRepository.existsByWarehouseIdAndUserId(warehouseId, user.getId());
+                if (!hasAccess) {
+                    throw new BadRequestException("Tài khoản không có quyền truy cập kho này");
+                }
+            }
+        }
+
         List<String> roles = user.getRoles().stream()
                 .map(role -> "ROLE_" + role.getName())
                 .toList();
 
-        String newAccessToken = generateAccessTokenFromUser(user.getId(), user.getEmail(), roles);
+        String newAccessToken = generateAccessTokenFromUser(user.getId(), user.getEmail(), roles, warehouseId);
         String newRefreshToken = generateRefreshToken(user.getId(), user.getEmail());
 
         saveRefreshToken(newRefreshToken, user, storedToken.getDeviceInfo(), storedToken.getIpAddress());
 
         log.info("Refresh token được làm mới cho người dùng: {}", user.getEmail());
-        return new LoginResponse(newAccessToken, newRefreshToken);
+        return new LoginResponse(newAccessToken, newRefreshToken, warehouseId);
     }
 
     @Override
@@ -159,33 +200,43 @@ public class AuthServiceImpl implements AuthService {
         return UserResponse.fromEntity(user);
     }
 
-    private String generateAccessToken(Authentication authentication, Long userId) {
+    private String generateAccessToken(Authentication authentication, Long userId, Long warehouseId) {
         Instant now = Instant.now();
         List<String> roles = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .toList();
 
-        JwtClaimsSet claims = JwtClaimsSet.builder()
+        JwtClaimsSet.Builder claimsBuilder = JwtClaimsSet.builder()
                 .subject(authentication.getName())
                 .issuedAt(now)
                 .expiresAt(now.plusMillis(accessTokenExpiration))
                 .claim("userId", userId)
-                .claim("roles", roles)
-                .build();
+                .claim("roles", roles);
+
+        if (warehouseId != null) {
+            claimsBuilder.claim("warehouseId", warehouseId);
+        }
+
+        JwtClaimsSet claims = claimsBuilder.build();
 
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
         return jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
     }
 
-    private String generateAccessTokenFromUser(Long userId, String email, List<String> roles) {
+    private String generateAccessTokenFromUser(Long userId, String email, List<String> roles, Long warehouseId) {
         Instant now = Instant.now();
-        JwtClaimsSet claims = JwtClaimsSet.builder()
+        JwtClaimsSet.Builder claimsBuilder = JwtClaimsSet.builder()
                 .subject(email)
                 .issuedAt(now)
                 .expiresAt(now.plusMillis(accessTokenExpiration))
                 .claim("userId", userId)
-                .claim("roles", roles)
-                .build();
+                .claim("roles", roles);
+
+        if (warehouseId != null) {
+            claimsBuilder.claim("warehouseId", warehouseId);
+        }
+
+        JwtClaimsSet claims = claimsBuilder.build();
 
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
         return jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();

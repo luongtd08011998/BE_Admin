@@ -21,6 +21,10 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 
 import org.springframework.security.authentication.BadCredentialsException;
 
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.dao.DataIntegrityViolationException;
+
 import vn.hoidanit.springrestwithai.dto.ApiResponse;
 
 @RestControllerAdvice
@@ -44,9 +48,23 @@ public class GlobalExceptionHandler {
                                 .body(ApiResponse.unauthorized("Email hoặc mật khẩu không đúng"));
         }
 
+        @ExceptionHandler({AccessDeniedException.class, AuthorizationDeniedException.class})
+        public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(Exception ex) {
+                log.warn("AccessDeniedException: {}", ex.getMessage());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                .body(ApiResponse.ofError(403, ex.getMessage(), "Forbidden - Bạn không có quyền truy cập chức năng này"));
+        }
+
         @ExceptionHandler(FileUploadException.class)
         public ResponseEntity<ApiResponse<Void>> handleFileUpload(FileUploadException ex) {
                 log.warn("FileUploadException: {}", ex.getMessage());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.badRequest(ex.getMessage()));
+        }
+
+        @ExceptionHandler(BadRequestException.class)
+        public ResponseEntity<ApiResponse<Void>> handleBadRequest(BadRequestException ex) {
+                log.warn("BadRequestException: {}", ex.getMessage());
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                                 .body(ApiResponse.badRequest(ex.getMessage()));
         }
@@ -142,7 +160,7 @@ public class GlobalExceptionHandler {
         }
 
         private String formatFieldError(FieldError fieldError) {
-                return fieldError.getField() + ": " + fieldError.getDefaultMessage();
+                return fieldError.getDefaultMessage();
         }
 
         @ExceptionHandler(IllegalArgumentException.class)
@@ -157,6 +175,22 @@ public class GlobalExceptionHandler {
                 log.warn("IllegalStateException: {}", ex.getMessage());
                 return ResponseEntity.status(HttpStatus.CONFLICT)
                                 .body(ApiResponse.conflict(ex.getMessage()));
+        }
+
+        @ExceptionHandler(DataIntegrityViolationException.class)
+        public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+                log.warn("DataIntegrityViolationException: {}", ex.getMessage());
+                String message = "Không thể thực hiện thao tác do dữ liệu đang được liên kết hoặc sử dụng ở nơi khác.";
+                if (ex.getCause() != null && ex.getCause().getCause() != null) {
+                    String rootMsg = ex.getCause().getCause().getMessage();
+                    if (rootMsg != null && rootMsg.contains("a foreign key constraint fails")) {
+                        message = "Không thể xóa bản ghi này vì nó đang được sử dụng ở các dữ liệu khác.";
+                    } else if (rootMsg != null && rootMsg.contains("Duplicate entry")) {
+                        message = "Dữ liệu bị trùng lặp, vui lòng kiểm tra lại.";
+                    }
+                }
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                                .body(ApiResponse.conflict(message));
         }
 
         /**

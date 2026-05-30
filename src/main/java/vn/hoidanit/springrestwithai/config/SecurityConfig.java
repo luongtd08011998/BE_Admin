@@ -49,6 +49,7 @@ public class SecurityConfig {
             "/api/v1/auth/register",
             "/api/v1/auth/refresh",
             "/api/v1/dashboard",
+            "/api/v1/qlk/dashboard",
             "/uploads/**",
             "/api/v1/qlkh/auth/login",
             "/api/v1/qlkh/auth/refresh",
@@ -133,6 +134,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/tags/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/media/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/qlk/warehouses").permitAll()
 
                         .requestMatchers(new RegexRequestMatcher("^/api/v1/articles/slug/[^/]+/view$", "POST"))
                                 .permitAll()
@@ -147,6 +149,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/qlkh/customer/feedbacks/**").authenticated()
                         .requestMatchers("/api/v1/admin/logs").authenticated()
                         .requestMatchers("/api/v1/admin/notifications/**").authenticated()
+                        .requestMatchers("/api/v1/auth/logout").authenticated()
                         .anyRequest().access(permissionAuthorizationManager))
 
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {

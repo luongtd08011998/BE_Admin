@@ -109,4 +109,25 @@ public class PermissionAuthorizationManager
         }
         return Collections.emptyList();
     }
+
+    /**
+     * Dùng cho @PreAuthorize("@permissionAuthorizationManager.hasPermission(...)")
+     */
+    public boolean hasPermission(String permissionName) {
+        Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return false;
+        }
+
+        List<String> userRoles = getUserRolesFromJwt(authentication);
+        for (String role : userRoles) {
+            List<Permission> permissions = rolePermissionsCache.getOrDefault(role, Collections.emptyList());
+            for (Permission perm : permissions) {
+                if (perm.getName().equalsIgnoreCase(permissionName)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 }
