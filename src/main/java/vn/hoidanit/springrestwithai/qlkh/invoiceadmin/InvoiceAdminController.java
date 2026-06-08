@@ -106,4 +106,14 @@ public class InvoiceAdminController {
         DebtReminderResponse response = invoiceAdminService.sendInvoiceNotification(monthInvoiceIds);
         return ResponseEntity.ok(ApiResponse.success("Gửi thông báo hóa đơn thành công", response));
     }
+
+    @PostMapping("/send-payment-notification")
+    public ResponseEntity<ApiResponse<DebtReminderResponse>> sendPaymentNotification(@RequestBody Map<String, List<Integer>> request) {
+        List<Integer> monthInvoiceIds = request.get("monthInvoiceIds");
+        if (monthInvoiceIds == null || monthInvoiceIds.isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResponse.badRequest("Vui lòng cung cấp monthInvoiceIds"));
+        }
+        DebtReminderResponse response = invoiceAdminService.sendPaymentNotification(monthInvoiceIds);
+        return ResponseEntity.ok(ApiResponse.success("Gửi thông báo xác nhận thanh toán thành công", response));
+    }
 }

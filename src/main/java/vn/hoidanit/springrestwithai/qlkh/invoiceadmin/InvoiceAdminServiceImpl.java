@@ -88,12 +88,16 @@ public class InvoiceAdminServiceImpl implements InvoiceAdminService {
         java.util.List<Integer> invoiceNotifiedIds = notificationService.findAllInvoiceNotifiedIds();
         if (invoiceNotifiedIds.isEmpty()) invoiceNotifiedIds = java.util.List.of(-1);
 
+        // Fetch payment notified IDs (PAYMENT type)
+        java.util.List<Integer> paymentNotifiedIds = notificationService.findAllPaymentNotifiedIds();
+        java.util.Set<Integer> paymentNotifiedSet = new java.util.HashSet<>(paymentNotifiedIds);
+
         Page<AdminInvoiceResponse> page = monthInvoiceRepository.findAdminInvoices(yearMonth, paymentStatus, customerName, digiCode, remindStatus, roadId, remindedIds, overdueIds, cutwaterIds, invoiceNotifiedIds, invoiceNotifyStatus, pageable);
 
         // Gọi VNPT song song cho tất cả hóa đơn trong trang hiện tại
         List<AdminInvoiceResponse> content = page.getContent();
         
-        // Map isReminded, isOverdue, isWaterCutoff, isInvoiceNotified boolean
+        // Map isReminded, isOverdue, isWaterCutoff, isInvoiceNotified, isPaymentNotified boolean
         java.util.Set<Integer> remindedSet = new java.util.HashSet<>(remindedIds);
         java.util.Set<Integer> overdueSet = new java.util.HashSet<>(overdueIds);
         java.util.Set<Integer> cutwaterSet = new java.util.HashSet<>(cutwaterIds);
@@ -103,6 +107,7 @@ public class InvoiceAdminServiceImpl implements InvoiceAdminService {
             res.setIsOverdue(overdueSet.contains(res.getId()));
             res.setIsWaterCutoff(cutwaterSet.contains(res.getId()));
             res.setIsInvoiceNotified(invoiceNotifiedSet.contains(res.getId()));
+            res.setIsPaymentNotified(paymentNotifiedSet.contains(res.getId()));
             
             if (res.getPaymentStatus() != null && res.getPaymentStatus() != 2
                     && res.getTotalAmount() != null && res.getTotalAmount() > 0) {
@@ -313,6 +318,81 @@ public class InvoiceAdminServiceImpl implements InvoiceAdminService {
                     .get(120, java.util.concurrent.TimeUnit.SECONDS);
         } catch (Exception e) {
             log.error("Timeout hoặc lỗi khi gửi thông báo hóa đơn song song: {}", e.getMessage());
+        }
+
+        return new DebtReminderResponse(sentCount.get(), skipCount + (toSend.size() - sentCount.get()));
+    }
+
+    @Override
+    public DebtReminderResponse sendPaymentNotification(List<Integer> monthInvoiceIds) {
+        if (monthInvoiceIds == null || monthInvoiceIds.isEmpty()) {
+            return new DebtReminderResponse(0, 0);
+        }
+
+        List<MonthInvoice> invoices = monthInvoiceRepository.findAllById(monthInvoiceIds);
+        if (invoices.isEmpty()) {
+            return new DebtReminderResponse(0, 0);
+        }
+
+        // Chỉ gửi cho hóa đơn đã thanh toán (paymentStatus == 2)
+        List<MonthInvoice> paidInvoices = invoices.stream()
+                .filter(inv -> inv.getPaymentStatus() != null && inv.getPaymentStatus() == 2)
+                .toList();
+
+        int skipCount = invoices.size() - paidInvoices.size();
+
+        if (paidInvoices.isEmpty()) {
+            return new DebtReminderResponse(0, skipCount);
+        }
+
+        // Lọc bỏ hóa đơn đã từng gửi thông báo thanh toán (tránh gửi trùng)
+        List<Integer> requestedIds = paidInvoices.stream().map(MonthInvoice::getMonthInvoiceId).toList();
+        java.util.Set<Integer> alreadyNotified = new java.util.HashSet<>(
+                notificationService.findAllPaymentNotifiedIds().stream()
+                        .filter(requestedIds::contains)
+                        .toList());
+
+        skipCount += (int) paidInvoices.stream().filter(inv -> alreadyNotified.contains(inv.getMonthInvoiceId())).count();
+
+        java.util.concurrent.atomic.AtomicInteger sentCount = new java.util.concurrent.atomic.AtomicInteger(0);
+
+        List<MonthInvoice> toSend = paidInvoices.stream()
+                .filter(inv -> !alreadyNotified.contains(inv.getMonthInvoiceId()))
+                .filter(inv -> inv.getCustomerId() != null)
+                .toList();
+
+        List<CompletableFuture<Void>> futures = toSend.stream()
+                .<CompletableFuture<Void>>map(inv -> CompletableFuture.runAsync(() -> {
+                    try {
+                        var customer = customerRepository.findById(inv.getCustomerId()).orElse(null);
+                        String digiCode = customer != null ? customer.getDigiCode() : "";
+                        String customerName = customer != null ? customer.getName() : "";
+                        String address = customer != null ? customer.getAddress() : "";
+                        Double totalAmount = (double) (
+                                (inv.getAmount() != null ? inv.getAmount() : 0)
+                                + (inv.getEnvFee() != null ? inv.getEnvFee() : 0)
+                                + (inv.getTaxFee() != null ? inv.getTaxFee() : 0));
+
+                        notificationService.sendAndMarkPaymentNotification(
+                                inv.getMonthInvoiceId(),
+                                inv.getCustomerId(),
+                                inv.getYearMonth(),
+                                digiCode,
+                                customerName,
+                                totalAmount,
+                                address);
+                        sentCount.incrementAndGet();
+                    } catch (Exception e) {
+                        log.error("Lỗi khi gửi thông báo thanh toán cho invoiceId={}: {}", inv.getMonthInvoiceId(), e.getMessage());
+                    }
+                }, notificationExecutor))
+                .toList();
+
+        try {
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                    .get(120, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.error("Timeout hoặc lỗi khi gửi thông báo thanh toán song song: {}", e.getMessage());
         }
 
         return new DebtReminderResponse(sentCount.get(), skipCount + (toSend.size() - sentCount.get()));

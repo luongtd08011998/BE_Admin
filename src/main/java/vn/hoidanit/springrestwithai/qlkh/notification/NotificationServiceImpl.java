@@ -408,6 +408,10 @@ public class NotificationServiceImpl implements NotificationService {
         return notifiedInvoiceRepository.findAllNotifiedMonthInvoiceIds();
     }
 
+    public List<Integer> findAllPaymentNotifiedIds() {
+        return notifiedPaymentRepository.findAllNotifiedMonthInvoiceIds();
+    }
+
     /**
      * Gửi thông báo hệ thống (FCM Topic)
      */

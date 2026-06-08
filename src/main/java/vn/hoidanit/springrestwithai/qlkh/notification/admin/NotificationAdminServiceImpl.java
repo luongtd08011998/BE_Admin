@@ -95,6 +95,7 @@ public class NotificationAdminServiceImpl implements NotificationAdminService {
 
         Map<String, Long> byStatus = new LinkedHashMap<>();
         for (Object[] row : notificationRepository.countGroupByDeliveryStatus()) {
+            if (row[0] == null) continue;          // bỏ qua row có status = NULL
             DeliveryStatus status = (DeliveryStatus) row[0];
             Long count = (Long) row[1];
             byStatus.put(status.name(), count);

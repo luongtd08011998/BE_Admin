@@ -24,4 +24,8 @@ public interface NotifiedPaymentRepository extends JpaRepository<NotifiedPayment
      */
     @Query("SELECT n.monthInvoiceId FROM NotifiedPayment n WHERE n.yearMonth >= :fromYearMonth")
     List<Integer> findNotifiedMonthInvoiceIdsSince(@Param("fromYearMonth") String fromYearMonth);
+
+    /** Lấy tất cả monthInvoiceId đã gửi thông báo PAYMENT */
+    @Query("SELECT n.monthInvoiceId FROM NotifiedPayment n")
+    List<Integer> findAllNotifiedMonthInvoiceIds();
 }

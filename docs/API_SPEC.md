@@ -1560,6 +1560,20 @@ Send water cutoff notification for a specific invoice.
 **Body:** `{ "monthInvoiceId": "123", "employeeName": "...", "employeePhone": "..." }`
 **Response:** `{ "data": true }`
 
+### POST /admin/invoices/send-payment-notification 🔒
+Admin manually sends payment-success notifications for paid invoices.
+**Body:** `{ "monthInvoiceIds": [101, 102] }`
+- Only sends for invoices with `paymentStatus == 2` (paid). Others are skipped.
+- Deduplication: invoices already notified (in `NotifiedPayment` table) are skipped.
+- Sends in parallel (up to 10 threads), timeout 120 s.
+
+**Response:** `{ "data": { "sentCount": 2, "skipCount": 0 } }`
+
+**Errors:**
+| Status | When |
+|--------|------|
+| 400 | `monthInvoiceIds` is null or empty |
+
 ---
 
 ## 17. Admin — Feedbacks
@@ -1732,6 +1746,7 @@ Generate VietQR payment URL.
 | POST | /admin/invoices/send-debt-reminder | 🔒 | Send debt reminder |
 | POST | /admin/invoices/send-overdue-reminder | 🔒 | Send overdue reminder |
 | POST | /admin/invoices/send-water-cutoff | 🔒 | Send water cutoff |
+| POST | /admin/invoices/send-payment-notification | 🔒 | Send payment success notification |
 | **Admin Feedbacks** | | | |
 | GET | /admin/feedbacks/statistics | 🔒 | Feedback stats |
 | GET | /admin/feedbacks | 🔒 | List feedbacks |

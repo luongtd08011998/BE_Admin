@@ -14,6 +14,7 @@ public class AdminInvoiceResponse {
     private Boolean isOverdue;
     private Boolean isWaterCutoff;
     private Boolean isInvoiceNotified;
+    private Boolean isPaymentNotified;
     private Boolean hasReplacement;
 
     private String fkey;
@@ -34,6 +35,7 @@ public class AdminInvoiceResponse {
         this.isOverdue = false;
         this.isWaterCutoff = false;
         this.isInvoiceNotified = false;
+        this.isPaymentNotified = false;
         this.hasReplacement = hasReplacement;
         this.blankNo = blankNo;
         this.roadId = roadId;
@@ -141,6 +143,14 @@ public class AdminInvoiceResponse {
 
     public void setHasReplacement(Boolean hasReplacement) {
         this.hasReplacement = hasReplacement;
+    }
+
+    public Boolean getIsPaymentNotified() {
+        return isPaymentNotified;
+    }
+
+    public void setIsPaymentNotified(Boolean isPaymentNotified) {
+        this.isPaymentNotified = isPaymentNotified;
     }
 
     public String getQrUrl() {

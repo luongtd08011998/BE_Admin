@@ -11,4 +11,5 @@ public interface InvoiceAdminService {
     DebtReminderResponse sendOverdueReminder(String yearMonth, Integer monthInvoiceId);
     boolean sendWaterCutoff(Integer monthInvoiceId, String employeeName, String employeePhone);
     DebtReminderResponse sendInvoiceNotification(List<Integer> monthInvoiceIds);
+    DebtReminderResponse sendPaymentNotification(List<Integer> monthInvoiceIds);
 }
