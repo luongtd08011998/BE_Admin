@@ -10,6 +10,7 @@ import vn.hoidanit.springrestwithai.feature.notification.NotificationSpecificati
 import vn.hoidanit.springrestwithai.feature.notification.entity.DeliveryStatus;
 import vn.hoidanit.springrestwithai.feature.notification.entity.Notification;
 import vn.hoidanit.springrestwithai.qlkh.FirebaseService;
+import vn.hoidanit.springrestwithai.qlkh.customer.Customer;
 import vn.hoidanit.springrestwithai.qlkh.customer.CustomerRepository;
 import vn.hoidanit.springrestwithai.qlkh.invoice.MonthInvoiceRepository;
 import vn.hoidanit.springrestwithai.qlkh.notification.admin.dto.NotificationAdminFilterRequest;
@@ -47,20 +48,42 @@ public class NotificationAdminServiceImpl implements NotificationAdminService {
 
     @Override
     public ResultPaginationDTO getNotifications(NotificationAdminFilterRequest filter, Pageable pageable) {
-        List<Integer> customerIdsByRoad = null;
+        List<Integer> targetCustomerIds = null;
         if (filter.roadId() != null) {
-            customerIdsByRoad = monthInvoiceRepository.findDistinctCustomerIdsByRoadId(filter.roadId());
-            if (customerIdsByRoad.isEmpty()) {
+            targetCustomerIds = monthInvoiceRepository.findDistinctCustomerIdsByRoadId(filter.roadId());
+            if (targetCustomerIds.isEmpty()) {
                 return new ResultPaginationDTO(
                         new ResultPaginationDTO.Meta(pageable.getPageNumber() + 1, pageable.getPageSize(), 0, 0),
                         Collections.emptyList());
             }
         }
 
+        if (filter.customerDigiCode() != null && !filter.customerDigiCode().isBlank()) {
+            List<Customer> customers = customerRepository.searchByNameOrDigiCode(filter.customerDigiCode().trim());
+            List<Integer> searchedIds = customers.stream().map(Customer::getCustomerId).toList();
+            if (searchedIds.isEmpty()) {
+                return new ResultPaginationDTO(
+                        new ResultPaginationDTO.Meta(pageable.getPageNumber() + 1, pageable.getPageSize(), 0, 0),
+                        Collections.emptyList());
+            }
+            if (targetCustomerIds == null) {
+                targetCustomerIds = searchedIds;
+            } else {
+                List<Integer> intersection = new ArrayList<>(targetCustomerIds);
+                intersection.retainAll(searchedIds);
+                if (intersection.isEmpty()) {
+                    return new ResultPaginationDTO(
+                            new ResultPaginationDTO.Meta(pageable.getPageNumber() + 1, pageable.getPageSize(), 0, 0),
+                            Collections.emptyList());
+                }
+                targetCustomerIds = intersection;
+            }
+        }
+
         Page<Notification> page = notificationRepository.findAll(
                 NotificationSpecification.withFilters(
                         filter.type(), filter.deliveryStatus(),
-                        filter.customerId(), customerIdsByRoad,
+                        filter.customerId(), targetCustomerIds,
                         filter.createdFrom(), filter.createdTo()
                 ), pageable);
 

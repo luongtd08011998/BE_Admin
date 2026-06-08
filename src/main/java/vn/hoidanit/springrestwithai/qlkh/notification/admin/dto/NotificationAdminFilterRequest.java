@@ -6,6 +6,7 @@ public record NotificationAdminFilterRequest(
         String type,
         String deliveryStatus,
         Integer customerId,
+        String customerDigiCode,
         LocalDateTime createdFrom,
         LocalDateTime createdTo,
         Integer roadId

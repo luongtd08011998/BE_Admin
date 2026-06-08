@@ -1612,7 +1612,43 @@ Get roads for dropdown filter.
 
 ---
 
-## 19. External — QR Payment
+## 19. Admin — Notifications
+
+> Base path: `/api/v1/admin/notifications`
+
+### GET /admin/notifications 🔒
+List all notifications (admin tracker). Paginated with filters.
+**Query filters:** `type`, `deliveryStatus`, `customerId`, `customerDigiCode`, `createdFrom`, `createdTo`, `roadId`, `page`, `size`
+**NotificationAdminResponse:**
+```json
+{
+  "id": 1,
+  "customerId": 101,
+  "customerName": "Nguyễn Văn A",
+  "customerDigiCode": "KH001",
+  "title": "Thông báo hóa đơn",
+  "type": "INVOICE",
+  "referenceId": 123,
+  "isRead": false,
+  "deliveryStatus": "DELIVERED",
+  "deliveredAt": "2026-06-08T10:00:00",
+  "failureReason": null,
+  "createdAt": "2026-06-08T09:30:00"
+}
+```
+
+### GET /admin/notifications/statistics 🔒
+Get statistics counts of sent notifications by status/type.
+
+### GET /admin/notifications/{id} 🔒
+Get details of a single notification.
+
+### POST /admin/notifications/{id}/resend 🔒
+Resend a failed notification.
+
+---
+
+## 20. External — QR Payment
 
 > Base path: `/api/v1/external/qr-payment`
 > Auth: API Key (not JWT)
@@ -1756,6 +1792,11 @@ Generate VietQR payment URL.
 | GET | /admin/feedbacks/{id}/replies | 🔒 | List replies |
 | **Admin Roads** | | | |
 | GET | /admin/roads | 🔒 | Roads dropdown |
+| **Admin Notifications** | | | |
+| GET | /admin/notifications | 🔒 | List notifications (admin) |
+| GET | /admin/notifications/statistics | 🔒 | Notifications statistics |
+| GET | /admin/notifications/{id} | 🔒 | Get notification detail |
+| POST | /admin/notifications/{id}/resend | 🔒 | Resend notification |
 | **External** | | | |
 | POST | /external/qr-payment/generate | 🔑 | Generate VietQR |
 
