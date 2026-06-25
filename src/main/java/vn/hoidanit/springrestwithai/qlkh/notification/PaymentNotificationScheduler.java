@@ -118,22 +118,24 @@ public class PaymentNotificationScheduler {
                     continue;
                 }
 
-                // Chọn hóa đơn phù hợp nhất (khớp tiền nhất)
-                InvoiceInfoDTO selectedInvoice = self.matchInvoice(unnotifiedInvoices, pl.getAmount());
+                // Chọn các hóa đơn phù hợp (khớp tiền đơn lẻ hoặc khớp tổng tiền)
+                List<InvoiceInfoDTO> selectedInvoices = self.matchInvoices(unnotifiedInvoices, pl.getAmount());
 
-                // Gửi thông báo xác nhận thanh toán thành công
-                boolean sent = notificationService.sendAndMarkPaymentNotification(
-                        selectedInvoice.getMonthInvoiceId(),
-                        selectedInvoice.getCustomerId(),
-                        selectedInvoice.getYearMonth(),
-                        selectedInvoice.getDigiCode(),
-                        selectedInvoice.getCustomerName(),
-                        pl.getAmount(), // Dùng số tiền thanh toán thực tế của paymentline
-                        selectedInvoice.getAddress()
-                );
+                // Gửi thông báo xác nhận thanh toán thành công cho từng hóa đơn
+                for (InvoiceInfoDTO selectedInvoice : selectedInvoices) {
+                    boolean sent = notificationService.sendAndMarkPaymentNotification(
+                            selectedInvoice.getMonthInvoiceId(),
+                            selectedInvoice.getCustomerId(),
+                            selectedInvoice.getYearMonth(),
+                            selectedInvoice.getDigiCode(),
+                            selectedInvoice.getCustomerName(),
+                            selectedInvoice.getAmount(), // Dùng số tiền thực tế của hóa đơn thay vì số tiền gộp
+                            selectedInvoice.getAddress()
+                    );
 
-                if (sent) {
-                    sentCount++;
+                    if (sent) {
+                        sentCount++;
+                    }
                 }
 
                 // Chỉ tăng mốc khi xử lý thành công (bao gồm cả các trường hợp bỏ qua hợp lệ ở trên)
@@ -215,19 +217,36 @@ public class PaymentNotificationScheduler {
     }
 
     /**
-     * So khớp hóa đơn phù hợp nhất dựa theo số tiền.
+     * So khớp danh sách hóa đơn dựa theo số tiền (hỗ trợ thanh toán gộp).
      */
-    public InvoiceInfoDTO matchInvoice(List<InvoiceInfoDTO> unnotifiedInvoices, Double paymentAmount) {
+    public List<InvoiceInfoDTO> matchInvoices(List<InvoiceInfoDTO> unnotifiedInvoices, Double paymentAmount) {
+        double targetAmount = paymentAmount != null ? paymentAmount : 0.0;
+
         if (unnotifiedInvoices.size() == 1) {
-            return unnotifiedInvoices.get(0);
+            return unnotifiedInvoices;
         }
-        return unnotifiedInvoices.stream()
+
+        // Ưu tiên 1: Tìm 1 hóa đơn khớp chính xác số tiền
+        List<InvoiceInfoDTO> exactSingleMatch = unnotifiedInvoices.stream()
                 .filter(inv -> {
                     double amt = inv.getAmount() != null ? inv.getAmount() : 0.0;
-                    return Math.abs(amt - (paymentAmount != null ? paymentAmount : 0.0)) < 1.0;
+                    return Math.abs(amt - targetAmount) < 1.0;
                 })
-                .findFirst()
-                .orElse(unnotifiedInvoices.get(0)); // Fallback lấy hóa đơn đầu tiên nếu không khớp tiền hoàn hảo
+                .toList();
+        if (exactSingleMatch.size() == 1) {
+            return exactSingleMatch;
+        }
+
+        // Ưu tiên 2: Khớp tổng tiền (Thanh toán gộp)
+        double totalAmount = unnotifiedInvoices.stream()
+                .mapToDouble(inv -> inv.getAmount() != null ? inv.getAmount() : 0.0)
+                .sum();
+        if (Math.abs(totalAmount - targetAmount) < 1.0) {
+            return unnotifiedInvoices;
+        }
+
+        // Fallback: Lấy hóa đơn đầu tiên nếu không khớp
+        return java.util.List.of(unnotifiedInvoices.get(0));
     }
 
     /**
