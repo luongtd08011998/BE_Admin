@@ -1560,6 +1560,19 @@ Send water cutoff notification for a specific invoice.
 **Body:** `{ "monthInvoiceId": "123", "employeeName": "...", "employeePhone": "..." }`
 **Response:** `{ "data": true }`
 
+### POST /admin/invoices/send-invoice-notification 🔒
+Admin manually sends bill/invoice notifications for month invoices.
+**Body:** `{ "monthInvoiceIds": [101, 102] }`
+- Deduplication: invoices already notified (checked via `notificationService.findAllInvoiceNotifiedIds()`) are skipped.
+- Sends in parallel (up to 10 threads), timeout 120 s.
+
+**Response:** `{ "data": { "sentCount": 2, "skipCount": 0 } }`
+
+**Errors:**
+| Status | When |
+|--------|------|
+| 400 | `monthInvoiceIds` is null or empty |
+
 ### POST /admin/invoices/send-payment-notification 🔒
 Admin manually sends payment-success notifications for paid invoices.
 **Body:** `{ "monthInvoiceIds": [101, 102] }`
@@ -1648,7 +1661,42 @@ Resend a failed notification.
 
 ---
 
-## 20. External — QR Payment
+## 20. Admin — Customer Devices
+
+> Base path: `/api/v1/admin/customer-devices`
+
+### GET /admin/customer-devices 🔒
+Get paginated status of customer FCM device registrations.
+**Query filters:** `status` (e.g. `REGISTERED`, `UNREGISTERED`), `keyword` (customer search by name/code), `isActive` (0/1), `roadId` (tuyến đường), `page`, `size`
+**Response (ResultPaginationDTO with CustomerDeviceStatusResponse):**
+```json
+{
+  "meta": {
+    "page": 1,
+    "pageSize": 10,
+    "pages": 5,
+    "total": 48
+  },
+  "data": [
+    {
+      "customerId": 101,
+      "digiCode": "KH001",
+      "name": "Nguyễn Văn A",
+      "phone": "0987654321",
+      "email": "customer@example.com",
+      "isActive": 1,
+      "deviceRegistered": true,
+      "deviceCount": 2,
+      "platforms": ["ANDROID", "IOS"],
+      "lastRegisteredAt": "2026-06-08T10:00:00"
+    }
+  ]
+}
+```
+
+---
+
+## 21. External — QR Payment
 
 > Base path: `/api/v1/external/qr-payment`
 > Auth: API Key (not JWT)
@@ -1782,6 +1830,7 @@ Generate VietQR payment URL.
 | POST | /admin/invoices/send-debt-reminder | 🔒 | Send debt reminder |
 | POST | /admin/invoices/send-overdue-reminder | 🔒 | Send overdue reminder |
 | POST | /admin/invoices/send-water-cutoff | 🔒 | Send water cutoff |
+| POST | /admin/invoices/send-invoice-notification | 🔒 | Send invoice notification |
 | POST | /admin/invoices/send-payment-notification | 🔒 | Send payment success notification |
 | **Admin Feedbacks** | | | |
 | GET | /admin/feedbacks/statistics | 🔒 | Feedback stats |
@@ -1797,6 +1846,8 @@ Generate VietQR payment URL.
 | GET | /admin/notifications/statistics | 🔒 | Notifications statistics |
 | GET | /admin/notifications/{id} | 🔒 | Get notification detail |
 | POST | /admin/notifications/{id}/resend | 🔒 | Resend notification |
+| **Admin Customer Devices** | | | |
+| GET | /admin/customer-devices | 🔒 | Customer device status |
 | **External** | | | |
 | POST | /external/qr-payment/generate | 🔑 | Generate VietQR |
 

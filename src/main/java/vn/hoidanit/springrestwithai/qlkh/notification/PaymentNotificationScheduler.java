@@ -136,10 +136,15 @@ public class PaymentNotificationScheduler {
                     sentCount++;
                 }
 
+                // Chỉ tăng mốc khi xử lý thành công (bao gồm cả các trường hợp bỏ qua hợp lệ ở trên)
+                maxProcessedId = pl.getPaymentLineId();
+
             } catch (Exception e) {
-                log.error("[PaymentNotify] Lỗi khi xử lý dòng thanh toán lineId={}: {}", pl.getPaymentLineId(), e.getMessage(), e);
+                log.error("[PaymentNotify] Lỗi khi xử lý dòng thanh toán lineId={}: {}. Dừng tại đây để retry lần chạy tiếp theo.",
+                        pl.getPaymentLineId(), e.getMessage(), e);
+                // KHÔNG tăng maxProcessedId — dòng này sẽ được retry ở lần cron tiếp theo
+                break;
             }
-            maxProcessedId = pl.getPaymentLineId();
         }
 
         // 4. Cập nhật mốc ID mới nhất đã quét

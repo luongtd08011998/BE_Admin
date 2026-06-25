@@ -123,12 +123,10 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
             FROM MonthInvoice m
             JOIN Customer c ON m.customerId = c.customerId
             WHERE m.createdDate LIKE CONCAT(:datePrefix, '%')
-            AND m.monthInvoiceId > :minId
             ORDER BY m.monthInvoiceId ASC
             """)
     List<vn.hoidanit.springrestwithai.qlkh.invoice.dto.InvoiceInfoDTO> findNewInvoicesByDatePrefix(
             @Param("datePrefix") String datePrefix,
-            @Param("minId") Integer minId,
             Pageable pageable);
 
     /**
