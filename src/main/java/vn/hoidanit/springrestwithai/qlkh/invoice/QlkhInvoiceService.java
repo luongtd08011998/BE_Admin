@@ -24,6 +24,8 @@ public interface QlkhInvoiceService {
 
     EInvoiceDownloadDto downloadMonthEInvoiceXml(Customer customer, Integer invoiceId);
 
+    EInvoicePdfDownloadDto downloadMonthEInvoicePdf(Customer customer, Integer invoiceId);
+
     InvoiceViewResponse viewMonthEInvoice(Customer customer, Integer invoiceId);
 
     byte[] listEInvoices(Customer customer, String fromDate, String toDate);
@@ -35,4 +37,6 @@ public interface QlkhInvoiceService {
     SalesInvoiceResponse getSalesInvoice(Customer customer, Integer salesInvoiceId);
     
     record EInvoiceDownloadDto(byte[] content, String filename, boolean isZip) {}
+    
+    record EInvoicePdfDownloadDto(byte[] content, String filename) {}
 }

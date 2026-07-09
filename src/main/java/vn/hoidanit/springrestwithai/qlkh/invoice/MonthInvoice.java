@@ -68,6 +68,9 @@ public class MonthInvoice {
     @Column(name = "RoadId")
     private Integer roadId;
 
+    @Column(name = "InvStatus")
+    private Integer invStatus;
+
     public Integer getMonthInvoiceId() {
         return monthInvoiceId;
     }
@@ -194,5 +197,13 @@ public class MonthInvoice {
 
     public void setRoadId(Integer roadId) {
         this.roadId = roadId;
+    }
+
+    public Integer getInvStatus() {
+        return invStatus;
+    }
+
+    public void setInvStatus(Integer invStatus) {
+        this.invStatus = invStatus;
     }
 }

@@ -118,6 +118,21 @@ public class QlkhInvoiceController {
                 .body(dto.content());
     }
 
+    @GetMapping("/invoices/{invoiceId}/e-invoice-download-pdf")
+    public ResponseEntity<byte[]> downloadMonthEInvoicePdf(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Integer invoiceId) {
+        Customer customer = getCustomerFromToken(authHeader);
+        QlkhInvoiceService.EInvoicePdfDownloadDto dto = qlkhInvoiceService.downloadMonthEInvoicePdf(customer, invoiceId);
+        ContentDisposition disposition = ContentDisposition.attachment()
+                .filename(dto.filename(), StandardCharsets.UTF_8)
+                .build();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(dto.content());
+    }
+
     @GetMapping("/invoices/{invoiceId}/e-invoice-view")
     public ResponseEntity<ApiResponse<InvoiceViewResponse>> viewMonthEInvoice(
             @RequestHeader("Authorization") String authHeader,

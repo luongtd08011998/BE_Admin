@@ -21,5 +21,7 @@ public record InvoiceResponse(
         Integer newVal,
         String rootKey,
         String fkey,
-        String blankNo) {
+        String blankNo,
+        Integer invStatus,
+        String invStatusLabel) {
 }

@@ -31,6 +31,8 @@ public class VnptPortalInvoiceClient {
     private static final Logger log = LoggerFactory.getLogger(VnptPortalInvoiceClient.class);
     private static final String TEMPURI = "http://tempuri.org/";
     private static final String SOAP_ACTION_DOWNLOAD_INV_ZIP_FKEY = "\"http://tempuri.org/downloadInvZipFkey\"";
+    private static final String SOAP_ACTION_DOWNLOAD_INV_PDF_FKEY = "\"http://tempuri.org/downloadInvPDFFkey\"";
+    private static final String SOAP_ACTION_DOWNLOAD_INV_PDF_FKEY_NO_PAY = "\"http://tempuri.org/downloadInvPDFFkeyNoPay\"";
     private static final String SOAP_ACTION_GET_INV_VIEW_FKEY = "\"http://tempuri.org/getInvViewFkey\"";
     private static final String SOAP_ACTION_GET_INV_VIEW_FKEY_NO_PAY = "\"http://tempuri.org/getInvViewFkeyNoPay\"";
     private static final String SOAP_ACTION_LIST_INV_BY_CUS = "\"http://tempuri.org/listInvByCus\"";
@@ -63,18 +65,22 @@ public class VnptPortalInvoiceClient {
         return callDownloadInvZipFkey(fkey, checkPayment, properties.getUsername(), properties.getPassword(), "primary");
     }
 
+    public String downloadInvPdfFkey(String fkey) {
+        if (!properties.isConfigured()) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Chưa cấu hình vnpt.portal (service-url, username, password).");
+        }
+        return callDownloadInvPdfFkeyNoPay(fkey, properties.getUsername(), properties.getPassword(), "primary");
+    }
+
     public String getInvView(String fkey) {
         if (!properties.isConfigured()) {
             throw new ResponseStatusException(
                     HttpStatus.SERVICE_UNAVAILABLE,
                     "Chưa cấu hình vnpt.portal (service-url, username, password).");
         }
-        String result = callGetInvViewFkey(fkey, properties.getUsername(), properties.getPassword());
-        if (ERR_NOT_PAID.equals(result.trim())) {
-            log.info("VNPT: hóa đơn chưa thanh toán (ERR:11), fallback sang getInvViewFkeyNoPay");
-            result = callGetInvViewFkeyNoPay(fkey, properties.getUsername(), properties.getPassword());
-        }
-        return result;
+        return callGetInvViewFkeyNoPay(fkey, properties.getUsername(), properties.getPassword());
     }
 
     public VnptDebugResult debugGetInvView(String fkey) {
@@ -85,7 +91,7 @@ public class VnptPortalInvoiceClient {
         }
         String fkeyMasked = maskFkey(fkey);
         String url = properties.getServiceUrl();
-        String r1 = callGetInvViewFkey(fkey, properties.getUsername(), properties.getPassword());
+        String r1 = callGetInvViewFkeyNoPay(fkey, properties.getUsername(), properties.getPassword());
         return new VnptDebugResult(url, maskUser(properties.getUsername()), fkeyMasked, resultPrefix(r1));
     }
 
@@ -150,6 +156,80 @@ public class VnptPortalInvoiceClient {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "VNPT trả về rỗng.");
         }
         return extractResultByLocalName(responseXml, "downloadInvZipFkeyResult");
+    }
+
+    private String callDownloadInvPdfFkey(
+            String fkey,
+            String userName,
+            String userPass,
+            String label) {
+        log.info("VNPT call {}: op=downloadInvPDFFkey, url={}, user={}, fkey={}",
+                label,
+                properties.getServiceUrl(),
+                maskUser(userName),
+                maskFkey(fkey));
+        String soap = buildSoap11RequestDownloadInvPdfFkey(
+                xmlEscape(fkey),
+                xmlEscape(userName),
+                xmlEscape(userPass));
+        String responseXml;
+        try {
+            responseXml = restClient
+                    .post()
+                    .uri(properties.getServiceUrl())
+                    .contentType(MediaType.parseMediaType("text/xml; charset=utf-8"))
+                    .header("SOAPAction", SOAP_ACTION_DOWNLOAD_INV_PDF_FKEY)
+                    .body(soap)
+                    .retrieve()
+                    .body(String.class);
+        } catch (RestClientException ex) {
+            log.warn("VNPT PortalService gọi thất bại (PDF): {}", ex.getMessage());
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "Không kết nối được máy chủ hóa đơn điện tử VNPT (PDF).",
+                    ex);
+        }
+        if (responseXml == null || responseXml.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "VNPT trả về rỗng.");
+        }
+        return extractResultByLocalName(responseXml, "downloadInvPDFFkeyResult");
+    }
+
+    private String callDownloadInvPdfFkeyNoPay(
+            String fkey,
+            String userName,
+            String userPass,
+            String label) {
+        log.info("VNPT call {}: op=downloadInvPDFFkeyNoPay, url={}, user={}, fkey={}",
+                label,
+                properties.getServiceUrl(),
+                maskUser(userName),
+                maskFkey(fkey));
+        String soap = buildSoap11RequestDownloadInvPdfFkeyNoPay(
+                xmlEscape(fkey),
+                xmlEscape(userName),
+                xmlEscape(userPass));
+        String responseXml;
+        try {
+            responseXml = restClient
+                    .post()
+                    .uri(properties.getServiceUrl())
+                    .contentType(MediaType.parseMediaType("text/xml; charset=utf-8"))
+                    .header("SOAPAction", SOAP_ACTION_DOWNLOAD_INV_PDF_FKEY_NO_PAY)
+                    .body(soap)
+                    .retrieve()
+                    .body(String.class);
+        } catch (RestClientException ex) {
+            log.warn("VNPT PortalService gọi thất bại (PDF NoPay): {}", ex.getMessage());
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "Không kết nối được máy chủ hóa đơn điện tử VNPT (PDF NoPay).",
+                    ex);
+        }
+        if (responseXml == null || responseXml.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "VNPT trả về rỗng.");
+        }
+        return extractResultByLocalName(responseXml, "downloadInvPDFFkeyNoPayResult");
     }
 
     private String callGetInvViewFkey(String fkey, String userName, String userPass) {
@@ -266,6 +346,44 @@ public class VnptPortalInvoiceClient {
                 </soap:Envelope>
                 """
                 .formatted(fkey, userName, userPass, checkPayment);
+    }
+
+    private static String buildSoap11RequestDownloadInvPdfFkey(
+            String fkey,
+            String userName,
+            String userPass) {
+        return """
+                <?xml version="1.0" encoding="utf-8"?>
+                <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+                <soap:Body>
+                <downloadInvPDFFkey xmlns="http://tempuri.org/">
+                <fkey>%s</fkey>
+                <userName>%s</userName>
+                <userPass>%s</userPass>
+                </downloadInvPDFFkey>
+                </soap:Body>
+                </soap:Envelope>
+                """
+                .formatted(fkey, userName, userPass);
+    }
+
+    private static String buildSoap11RequestDownloadInvPdfFkeyNoPay(
+            String fkey,
+            String userName,
+            String userPass) {
+        return """
+                <?xml version="1.0" encoding="utf-8"?>
+                <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+                <soap:Body>
+                <downloadInvPDFFkeyNoPay xmlns="http://tempuri.org/">
+                <fkey>%s</fkey>
+                <userName>%s</userName>
+                <userPass>%s</userPass>
+                </downloadInvPDFFkeyNoPay>
+                </soap:Body>
+                </soap:Envelope>
+                """
+                .formatted(fkey, userName, userPass);
     }
 
     private static String buildSoap11RequestGetInvViewFkey(String fkey, String userName, String userPass) {

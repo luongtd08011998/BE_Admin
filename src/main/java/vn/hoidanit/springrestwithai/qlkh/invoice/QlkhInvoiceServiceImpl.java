@@ -156,6 +156,32 @@ public class QlkhInvoiceServiceImpl implements QlkhInvoiceService {
     }
 
     @Override
+    public EInvoicePdfDownloadDto downloadMonthEInvoicePdf(Customer customer, Integer invoiceId) {
+        MonthInvoice invoice = monthInvoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Hóa đơn", "id", invoiceId));
+        if (!invoice.getCustomerId().equals(customer.getCustomerId())) {
+            throw new ResourceNotFoundException("Hóa đơn", "id", invoiceId);
+        }
+        String fkey = invoice.getFkey();
+        if (fkey == null || fkey.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Hóa đơn chưa có mã Fkey — chưa thể tải từ hệ thống hóa đơn điện tử.");
+        }
+        String vnptFkey = normalizeVnptFkey(fkey.trim());
+        String payload = vnptPortalInvoiceClient.downloadInvPdfFkey(vnptFkey);
+        if (payload.startsWith("ERR:")) {
+            throw new IllegalArgumentException("VNPT: " + payload.trim());
+        }
+        String ymSafe = safeFilenameSegment(invoice.getYearMonth());
+        byte[] body = tryDecodeZipBase64(payload);
+        if (body == null) {
+            throw new IllegalArgumentException("Không thể giải mã dữ liệu PDF từ VNPT.");
+        }
+        String filename = "hoadon-tien-nuoc-" + ymSafe + "-" + invoiceId + ".pdf";
+        return new EInvoicePdfDownloadDto(body, filename);
+    }
+
+    @Override
     public InvoiceViewResponse viewMonthEInvoice(Customer customer, Integer invoiceId) {
         MonthInvoice invoice = monthInvoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Hóa đơn", "id", invoiceId));
@@ -256,7 +282,9 @@ public class QlkhInvoiceServiceImpl implements QlkhInvoiceService {
                 inv.getNewVal(),
                 inv.getRootKey(),
                 inv.getFkey(),
-                inv.getBlankNo());
+                inv.getBlankNo(),
+                inv.getInvStatus(),
+                invStatusLabel(inv.getInvStatus()));
     }
 
     private static String trimEmptyToNull(String s) {
@@ -318,6 +346,23 @@ public class QlkhInvoiceServiceImpl implements QlkhInvoiceService {
         return switch (paymentStatus) {
             case 1 -> "Chưa thanh toán";
             case 2 -> "Đã thanh toán";
+            default -> "Không xác định";
+        };
+    }
+
+    private static String invStatusLabel(Integer invStatus) {
+        if (invStatus == null) {
+            return "Không xác định";
+        }
+        return switch (invStatus) {
+            case 1 -> "Hóa đơn gốc";
+            case 2 -> "Hóa đơn thay thế";
+            case 3 -> "Hóa đơn điều chỉnh tăng";
+            case 4 -> "Hóa đơn điều chỉnh giảm";
+            case 5 -> "Hóa đơn điều chỉnh thông tin";
+            case 6 -> "Hóa đơn xóa bỏ";
+            case 7 -> "Hóa đơn bị thay thế";
+            case 8 -> "Hóa đơn bị điều chỉnh";
             default -> "Không xác định";
         };
     }
