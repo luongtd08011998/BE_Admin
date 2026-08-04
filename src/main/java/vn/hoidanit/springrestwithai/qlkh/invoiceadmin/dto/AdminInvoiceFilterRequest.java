@@ -8,6 +8,8 @@ public class AdminInvoiceFilterRequest {
     private Integer remindStatus;
     private Integer roadId;
     private Integer invoiceNotifyStatus;
+    private Integer paymentNotifyStatus;
+    private Integer invStatus;
 
     public AdminInvoiceFilterRequest() {
     }
@@ -75,5 +77,21 @@ public class AdminInvoiceFilterRequest {
 
     public void setInvoiceNotifyStatus(Integer invoiceNotifyStatus) {
         this.invoiceNotifyStatus = invoiceNotifyStatus;
+    }
+
+    public Integer getPaymentNotifyStatus() {
+        return paymentNotifyStatus;
+    }
+
+    public void setPaymentNotifyStatus(Integer paymentNotifyStatus) {
+        this.paymentNotifyStatus = paymentNotifyStatus;
+    }
+
+    public Integer getInvStatus() {
+        return invStatus;
+    }
+
+    public void setInvStatus(Integer invStatus) {
+        this.invStatus = invStatus;
     }
 }

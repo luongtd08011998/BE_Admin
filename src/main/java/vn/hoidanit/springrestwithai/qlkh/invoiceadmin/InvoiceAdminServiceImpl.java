@@ -60,11 +60,15 @@ public class InvoiceAdminServiceImpl implements InvoiceAdminService {
         }
 
         Integer paymentStatus = (filter != null) ? filter.getPaymentStatus() : null;
-        String customerName = (filter != null) ? filter.getCustomerName() : null;
-        String digiCode = (filter != null) ? filter.getDigiCode() : null;
+        String keyword = (filter != null) ? filter.getDigiCode() : null;
+        if (keyword == null || keyword.isEmpty()) {
+            keyword = (filter != null) ? filter.getCustomerName() : null;
+        }
         Integer remindStatus = (filter != null) ? filter.getRemindStatus() : null;
         Integer roadId = (filter != null) ? filter.getRoadId() : null;
         Integer invoiceNotifyStatus = (filter != null) ? filter.getInvoiceNotifyStatus() : null;
+        Integer paymentNotifyStatus = (filter != null) ? filter.getPaymentNotifyStatus() : null;
+        Integer invStatus = (filter != null) ? filter.getInvStatus() : null;
 
         // Fetch all reminded invoice IDs from Notification table
         java.util.List<Long> remindedLongIds = notificationService.findAllRemindedInvoiceIds();
@@ -91,8 +95,9 @@ public class InvoiceAdminServiceImpl implements InvoiceAdminService {
         // Fetch payment notified IDs (PAYMENT type)
         java.util.List<Integer> paymentNotifiedIds = notificationService.findAllPaymentNotifiedIds();
         java.util.Set<Integer> paymentNotifiedSet = new java.util.HashSet<>(paymentNotifiedIds);
+        if (paymentNotifiedIds.isEmpty()) paymentNotifiedIds = java.util.List.of(-1);
 
-        Page<AdminInvoiceResponse> page = monthInvoiceRepository.findAdminInvoices(yearMonth, paymentStatus, customerName, digiCode, remindStatus, roadId, remindedIds, overdueIds, cutwaterIds, invoiceNotifiedIds, invoiceNotifyStatus, pageable);
+        Page<AdminInvoiceResponse> page = monthInvoiceRepository.findAdminInvoices(yearMonth, paymentStatus, keyword, remindStatus, roadId, remindedIds, overdueIds, cutwaterIds, invoiceNotifiedIds, invoiceNotifyStatus, invStatus, paymentNotifiedIds, paymentNotifyStatus, pageable);
 
         // Gọi VNPT song song cho tất cả hóa đơn trong trang hiện tại
         List<AdminInvoiceResponse> content = page.getContent();

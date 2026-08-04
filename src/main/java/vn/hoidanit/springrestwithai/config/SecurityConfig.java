@@ -135,6 +135,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/tags/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/media/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/qlk/warehouses").permitAll()
+                        // TODO: Xóa sau khi test xong tích hợp Paybill QR
+                        .requestMatchers(HttpMethod.POST, "/api/v1/qlkh/paybill/qr").permitAll()
 
                         .requestMatchers(new RegexRequestMatcher("^/api/v1/articles/slug/[^/]+/view$", "POST"))
                                 .permitAll()

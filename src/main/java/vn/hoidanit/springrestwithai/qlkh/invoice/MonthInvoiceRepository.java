@@ -187,6 +187,7 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
     @Query("""
             SELECT NEW vn.hoidanit.springrestwithai.qlkh.invoiceadmin.dto.AdminInvoiceResponse(
                 m.monthInvoiceId,
+                m.customerId,
                 c.digiCode, c.name, 
                 (COALESCE(m.amount, 0) + COALESCE(m.envFee, 0) + COALESCE(m.taxFee, 0)), 
                 m.yearMonth, 
@@ -205,8 +206,7 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
             AND (:yearMonth IS NULL OR :yearMonth = '' OR m.yearMonth = :yearMonth)
             AND (:roadId IS NULL OR m.roadId = :roadId)
             AND (:paymentStatus IS NULL OR m.paymentStatus = :paymentStatus)
-            AND (:customerName IS NULL OR :customerName = '' OR LOWER(c.name) LIKE LOWER(CONCAT('%', :customerName, '%')))
-            AND (:digiCode IS NULL OR :digiCode = '' OR LOWER(c.digiCode) LIKE LOWER(CONCAT('%', :digiCode, '%')))
+            AND (:keyword IS NULL OR :keyword = '' OR LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.digiCode) LIKE LOWER(CONCAT('%', :keyword, '%')))
             AND (:remindStatus IS NULL
                  OR (:remindStatus = 1 AND m.monthInvoiceId IN :remindedIds)
                  OR (:remindStatus = 0 AND m.monthInvoiceId NOT IN :remindedIds)
@@ -215,13 +215,16 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
             AND (:invoiceNotifyStatus IS NULL
                  OR (:invoiceNotifyStatus = 1 AND m.monthInvoiceId IN :invoiceNotifiedIds)
                  OR (:invoiceNotifyStatus = 0 AND m.monthInvoiceId NOT IN :invoiceNotifiedIds))
+            AND (:invStatus IS NULL OR m.invStatus = :invStatus)
+            AND (:paymentNotifyStatus IS NULL
+                 OR (:paymentNotifyStatus = 1 AND m.monthInvoiceId IN :paymentNotifiedIds)
+                 OR (:paymentNotifyStatus = 0 AND m.monthInvoiceId NOT IN :paymentNotifiedIds))
             ORDER BY m.yearMonth DESC, m.monthInvoiceId DESC
             """)
     Page<vn.hoidanit.springrestwithai.qlkh.invoiceadmin.dto.AdminInvoiceResponse> findAdminInvoices(
             @Param("yearMonth") String yearMonth,
             @Param("paymentStatus") Integer paymentStatus,
-            @Param("customerName") String customerName,
-            @Param("digiCode") String digiCode,
+            @Param("keyword") String keyword,
             @Param("remindStatus") Integer remindStatus,
             @Param("roadId") Integer roadId,
             @Param("remindedIds") java.util.List<Integer> remindedIds,
@@ -229,6 +232,9 @@ public interface MonthInvoiceRepository extends JpaRepository<MonthInvoice, Inte
             @Param("cutwaterIds") java.util.List<Integer> cutwaterIds,
             @Param("invoiceNotifiedIds") java.util.List<Integer> invoiceNotifiedIds,
             @Param("invoiceNotifyStatus") Integer invoiceNotifyStatus,
+            @Param("invStatus") Integer invStatus,
+            @Param("paymentNotifiedIds") java.util.List<Integer> paymentNotifiedIds,
+            @Param("paymentNotifyStatus") Integer paymentNotifyStatus,
             Pageable pageable);
 
     @Query("SELECT DISTINCT m.customerId FROM MonthInvoice m WHERE m.roadId = :roadId")

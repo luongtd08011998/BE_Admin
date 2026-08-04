@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public class AdminInvoiceResponse {
     private Integer id;
+    private Integer customerId;
     private String digiCode;
     private String customerName;
     private Double totalAmount;
@@ -22,8 +23,9 @@ public class AdminInvoiceResponse {
     private String blankNo;
     private Integer roadId;
 
-    public AdminInvoiceResponse(Integer id, String digiCode, String customerName, Double totalAmount, String yearMonth, String fkey, Integer paymentStatus, Boolean hasReplacement, String blankNo, Integer roadId) {
+    public AdminInvoiceResponse(Integer id, Integer customerId, String digiCode, String customerName, Double totalAmount, String yearMonth, String fkey, Integer paymentStatus, Boolean hasReplacement, String blankNo, Integer roadId) {
         this.id = id;
+        this.customerId = customerId;
         this.digiCode = digiCode;
         this.customerName = customerName;
         this.totalAmount = totalAmount;
@@ -47,6 +49,14 @@ public class AdminInvoiceResponse {
 
     public void setId(Integer id) {
         this.id = id;
+    }
+
+    public Integer getCustomerId() {
+        return customerId;
+    }
+
+    public void setCustomerId(Integer customerId) {
+        this.customerId = customerId;
     }
 
     public String getDigiCode() {
