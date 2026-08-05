@@ -9,7 +9,7 @@ spring:
     primary:
       jdbc-url: jdbc:mysql://localhost:3306/hr_management?allowPublicKeyRetrieval=true&useSSL=false
       username: root
-      password: 1234
+      password: Kawasaki1
       driver-class-name: com.mysql.cj.jdbc.Driver
       hikari:
         maximum-pool-size: 20
@@ -131,8 +131,8 @@ springdoc:
 
 # ── VietUnion Paybill QR ──
 paybill:
-  base-url: ${PAYBILL_BASE_URL:https://118.69.56.247:19005}
+  base-url: ${PAYBILL_BASE_URL:https://biller.payoo.vn:9443}
   biller-code: ${PAYBILL_BILLER_CODE:CNTOCTIEN}
   service-code: ${PAYBILL_SERVICE_CODE:NUOC}
-  password: ${PAYBILL_PASSWORD:payoo@123}
-  skip-ssl-verify: ${PAYBILL_SKIP_SSL:true}
+  password: ${PAYBILL_PASSWORD:bP55flRB5BIhVyo6}
+  skip-ssl-verify: ${PAYBILL_SKIP_SSL:false}

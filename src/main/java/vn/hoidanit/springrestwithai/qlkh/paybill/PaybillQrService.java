@@ -39,9 +39,9 @@ public class PaybillQrService {
         this.props = props;
     }
 
-    public PaybillQrResult createQrCode(Integer customerId, List<Integer> monthInvoiceIds) {
-        Customer customer = customerRepository.findById(customerId)
-            .orElseThrow(() -> new ResourceNotFoundException("Customer", "id", customerId));
+    public PaybillQrResult createQrCode(String digiCode, List<Integer> monthInvoiceIds) {
+        Customer customer = customerRepository.findByDigiCode(digiCode)
+            .orElseThrow(() -> new ResourceNotFoundException("Customer", "digiCode", digiCode));
 
         List<MonthInvoice> invoices = monthInvoiceRepository.findAllById(monthInvoiceIds);
         if (invoices.isEmpty()) {
@@ -53,7 +53,7 @@ public class PaybillQrService {
         List<String> periods = new ArrayList<>();
 
         for (MonthInvoice inv : invoices) {
-            if (!inv.getCustomerId().equals(customerId)) {
+            if (!inv.getCustomerId().equals(customer.getCustomerId())) {
                 throw new IllegalArgumentException("Hóa đơn " + inv.getMonthInvoiceId() + " không thuộc về khách hàng này.");
             }
             if (inv.getPaymentStatus() != null && inv.getPaymentStatus() == 2) {

@@ -266,6 +266,7 @@ public class QlkhInvoiceServiceImpl implements QlkhInvoiceService {
         Double taxFee = inv.getTaxFee();
         return new InvoiceResponse(
                 inv.getMonthInvoiceId(),
+                customer.getCustomerId(),
                 customer.getDigiCode(),
                 customer.getName(),
                 inv.getYearMonth(),

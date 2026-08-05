@@ -5,6 +5,7 @@ package vn.hoidanit.springrestwithai.qlkh.invoice.dto;
  */
 public record InvoiceResponse(
         Integer id,
+        Integer customerId,
         String digiCode,
         String customerName,
         String yearMonth,

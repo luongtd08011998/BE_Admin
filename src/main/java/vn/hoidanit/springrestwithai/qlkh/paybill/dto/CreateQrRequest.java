@@ -3,11 +3,11 @@ package vn.hoidanit.springrestwithai.qlkh.paybill.dto;
 import java.util.List;
 
 public class CreateQrRequest {
-    private Integer customerId;
+    private String digiCode;
     private List<Integer> monthInvoiceIds;
 
-    public Integer getCustomerId() { return customerId; }
-    public void setCustomerId(Integer customerId) { this.customerId = customerId; }
+    public String getDigiCode() { return digiCode; }
+    public void setDigiCode(String digiCode) { this.digiCode = digiCode; }
 
     public List<Integer> getMonthInvoiceIds() { return monthInvoiceIds; }
     public void setMonthInvoiceIds(List<Integer> monthInvoiceIds) { this.monthInvoiceIds = monthInvoiceIds; }

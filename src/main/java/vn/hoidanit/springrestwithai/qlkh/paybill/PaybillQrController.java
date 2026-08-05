@@ -18,10 +18,11 @@ public class PaybillQrController {
 
     @PostMapping("/qr")
     public ResponseEntity<ApiResponse<PaybillQrResult>> createQrCode(@RequestBody CreateQrRequest payload) {
-        if (payload.getCustomerId() == null || payload.getMonthInvoiceIds() == null || payload.getMonthInvoiceIds().isEmpty()) {
-            throw new IllegalArgumentException("Thiếu tham số customerId hoặc monthInvoiceIds");
+        if (payload.getDigiCode() == null || payload.getDigiCode().trim().isEmpty() || 
+            payload.getMonthInvoiceIds() == null || payload.getMonthInvoiceIds().isEmpty()) {
+            throw new IllegalArgumentException("Thiếu tham số digiCode hoặc monthInvoiceIds");
         }
-        PaybillQrResult result = paybillQrService.createQrCode(payload.getCustomerId(), payload.getMonthInvoiceIds());
+        PaybillQrResult result = paybillQrService.createQrCode(payload.getDigiCode(), payload.getMonthInvoiceIds());
         return ResponseEntity.ok(ApiResponse.success("Tạo mã QR thành công", result));
     }
 }
