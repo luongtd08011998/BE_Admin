@@ -57,7 +57,8 @@ public class SecurityConfig {
             "/api/v1/qlkh/month-invoices/**",
             "/api/v1/qlkh/customer/auth/login",
             "/api/v1/qlkh/customer/articles/**",
-            "/api/v1/auth/me"
+            "/api/v1/auth/me",
+            "/api/v1/app-configs/latest"
     };
 
     @Bean
