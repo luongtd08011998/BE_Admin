@@ -259,6 +259,7 @@ public class InvoiceAdminServiceImpl implements InvoiceAdminService {
         notificationService.sendWaterCutoffNotification(
                 invoice.getCustomerId(),
                 invoice.getMonthInvoiceId(),
+                invoice.getYearMonth(),
                 digiCode,
                 employeeName,
                 employeePhone);

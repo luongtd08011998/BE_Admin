@@ -22,8 +22,6 @@ import vn.hoidanit.springrestwithai.feature.user.User;
 @Table(name = "qlk_audit_logs")
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
 public class AuditLog {
 
@@ -50,6 +48,20 @@ public class AuditLog {
     private String ipAddress;
 
     private Instant timestamp;
+
+    public AuditLog() {
+    }
+
+    public AuditLog(Long id, User user, String action, String entityName, Long entityId, String details, String ipAddress, Instant timestamp) {
+        this.id = id;
+        this.user = user;
+        this.action = action;
+        this.entityName = entityName;
+        this.entityId = entityId;
+        this.details = details;
+        this.ipAddress = ipAddress;
+        this.timestamp = timestamp;
+    }
 
     @PrePersist
     public void prePersist() {

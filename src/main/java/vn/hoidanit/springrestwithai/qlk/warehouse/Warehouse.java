@@ -45,6 +45,7 @@ public class Warehouse {
     private String description;
 
     @Column(name = "alert_threshold")
+    @Builder.Default
     private Integer alertThreshold = 10;
 
     @Enumerated(EnumType.STRING)

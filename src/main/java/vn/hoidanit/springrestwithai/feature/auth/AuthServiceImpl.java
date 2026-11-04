@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -78,11 +79,18 @@ public class AuthServiceImpl implements AuthService {
         String email = request.email().trim();
         String password = request.password();
 
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user != null && user.getIsActive() != null && !user.getIsActive()) {
+            throw new DisabledException("Tài khoản của bạn đã bị ngừng hoạt động. Vui lòng liên hệ quản trị viên.");
+        }
+
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(email, password));
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Người dùng", "email", request.email()));
+        if (user == null) {
+            user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new ResourceNotFoundException("Người dùng", "email", request.email()));
+        }
 
         // Validate warehouse access
         boolean isSuperAdmin = authentication.getAuthorities().stream()
@@ -150,6 +158,9 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenRepository.save(storedToken);
 
         User user = storedToken.getUser();
+        if (user.getIsActive() != null && !user.getIsActive()) {
+            throw new DisabledException("Tài khoản của bạn đã bị ngừng hoạt động. Vui lòng liên hệ quản trị viên.");
+        }
 
         boolean isSuperAdmin = user.getRoles().stream()
                 .anyMatch(r -> r.getName().equals("SUPER_ADMIN"));

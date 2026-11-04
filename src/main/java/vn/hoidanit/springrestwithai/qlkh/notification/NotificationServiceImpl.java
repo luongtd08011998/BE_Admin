@@ -212,9 +212,10 @@ public class NotificationServiceImpl implements NotificationService {
         }
         contentBuilder.append(". Hóa đơn kỳ ").append(formattedYm)
                 .append(" của Quý khách đã quá hạn thanh toán. ")
+                .append("Quý KH vui lòng thanh toán trong vòng 3 ngày kể từ khi nhận được thông báo. ")
                 .append("Quá thời hạn trên, chúng tôi xin phép được tạm ngưng cấp nước. ")
                 .append("Việc cấp nước trở lại sẽ được thực hiện sau 24h kể từ khi Quý khách hoàn tất thanh toán tiền nước và chi phí mở nước 100.000 VND. ");
-        contentBuilder.append("Trân trọng cảm ơn. ");
+        contentBuilder.append("Vui lòng bỏ qua thông báo nếu đã thanh toán. ");
         contentBuilder.append("Mọi chi tiết xin liên hệ Trung tâm CSKH ").append(companyName);
         if (hotline != null && !hotline.isBlank()) {
             contentBuilder.append(": ").append(hotline);
@@ -230,15 +231,26 @@ public class NotificationServiceImpl implements NotificationService {
      */
     @Transactional("primaryTransactionManager")
     public void sendWaterCutoffNotification(Integer customerId, Integer monthInvoiceId, String digiCode, String employeeName, String employeePhone) {
+        sendWaterCutoffNotification(customerId, monthInvoiceId, null, digiCode, employeeName, employeePhone);
+    }
+
+    @Transactional("primaryTransactionManager")
+    public void sendWaterCutoffNotification(Integer customerId, Integer monthInvoiceId, String yearMonth, String digiCode, String employeeName, String employeePhone) {
         String empName = (employeeName != null && !employeeName.isBlank()) ? employeeName : defaultCutoffEmployeeName;
         String empPhone = (employeePhone != null && !employeePhone.isBlank()) ? employeePhone : defaultCutoffEmployeePhone;
 
-        String title = "[" + companyName + "] Thông báo cúp nước";
+        String title = "[" + companyName + "] Thông báo tạm ngưng cấp nước";
         StringBuilder contentBuilder = new StringBuilder();
-        contentBuilder.append("[").append(companyName).append("]: ");
-        contentBuilder.append("Do quý khách quá hạn thanh toán tiền nước mã KH ").append(digiCode);
-        contentBuilder.append(", việc cúp nước đã được chuyển cho nhân viên ").append(empName);
-        contentBuilder.append(" - ").append(empPhone).append(" thực hiện. ");
+        contentBuilder.append("[").append(companyName).append("] Kính gửi Quý khách hàng");
+        if (digiCode != null && !digiCode.isBlank()) {
+            contentBuilder.append(" (Mã KH: ").append(digiCode).append(")");
+        }
+        contentBuilder.append(": Do hóa đơn tiền nước");
+        if (yearMonth != null && !yearMonth.isBlank()) {
+            contentBuilder.append(" kỳ ").append(formatYearMonth(yearMonth));
+        }
+        contentBuilder.append(" đã quá hạn thanh toán, việc tạm ngưng cấp nước đã được chuyển cho nhân viên ")
+                .append(empName).append(" - ").append(empPhone).append(" thực hiện. ");
         contentBuilder.append("Trân trọng. ");
         contentBuilder.append("Mọi chi tiết xin liên hệ Trung tâm CSKH ").append(companyName);
         if (hotline != null && !hotline.isBlank()) {
@@ -471,11 +483,8 @@ public class NotificationServiceImpl implements NotificationService {
             contentBuilder.append(" - Địa chỉ: ").append(displayAddress);
         }
         contentBuilder.append(") có tổng số tiền thanh toán là ").append(formattedAmount).append(" đồng.\n\n");
-        contentBuilder.append("Hạn thanh toán trong vòng 07 ngày kể từ khi nhận được thông báo này.\n\n");
-        contentBuilder.append("Quý khách có thể thanh toán qua các Ví điện tử Payoo, ZaloPay, VNPT Money, AirPay, MoMo, ")
-                .append("ứng dụng Ngân hàng hoặc tại các điểm thu hộ: Circle K, Family Mart, Thế giới di động, ")
-                .append("Điện máy xanh, FPT và các bưu điện gần nhất.\n\n");
-        contentBuilder.append("Chân thành cảm ơn sự hợp tác của Quý khách.\n\n");
+        contentBuilder.append("Hạn thanh toán 7 ngày kể từ khi nhận được thông báo này.\n\n");
+        contentBuilder.append("Chân thành cảm ơn sự hợp tác của Quý khách\n\n");
         contentBuilder.append("Mọi chi tiết xin liên hệ Trung tâm CSKH ").append(companyName);
         if (hotline != null && !hotline.isBlank()) {
             contentBuilder.append(": ").append(hotline);

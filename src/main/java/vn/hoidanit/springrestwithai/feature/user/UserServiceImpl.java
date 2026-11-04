@@ -11,6 +11,8 @@ import vn.hoidanit.springrestwithai.exception.DuplicateResourceException;
 import vn.hoidanit.springrestwithai.exception.ResourceNotFoundException;
 import vn.hoidanit.springrestwithai.feature.company.Company;
 import vn.hoidanit.springrestwithai.feature.company.CompanyRepository;
+import vn.hoidanit.springrestwithai.gv.department.GvDepartment;
+import vn.hoidanit.springrestwithai.gv.department.GvDepartmentRepository;
 import vn.hoidanit.springrestwithai.feature.auth.RefreshTokenRepository;
 import vn.hoidanit.springrestwithai.feature.role.Role;
 import vn.hoidanit.springrestwithai.feature.role.RoleRepository;
@@ -31,6 +33,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final CompanyRepository companyRepository;
+    private final GvDepartmentRepository departmentRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -39,12 +42,14 @@ public class UserServiceImpl implements UserService {
             CompanyRepository companyRepository,
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
-            RefreshTokenRepository refreshTokenRepository) {
+            RefreshTokenRepository refreshTokenRepository,
+            GvDepartmentRepository departmentRepository) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.departmentRepository = departmentRepository;
     }
 
     @Override
@@ -55,6 +60,8 @@ public class UserServiceImpl implements UserService {
         }
 
         Company company = resolveCompany(request.companyId());
+        Long deptId = request.departmentId() != null ? request.departmentId() : request.gvdepartmentId();
+        GvDepartment department = resolveDepartment(deptId);
         List<Role> roles = resolveRoles(request.roleIds());
 
         User user = new User();
@@ -66,7 +73,9 @@ public class UserServiceImpl implements UserService {
         user.setGender(request.gender());
         user.setCompany(company);
         user.setRoles(roles);
+        user.setDepartment(department);
         user.setAvatar(request.avatar());
+        user.setIsActive(request.isActive() != null ? request.isActive() : true);
 
         User saved = userRepository.save(user);
         return UserResponse.fromEntity(saved);
@@ -82,8 +91,22 @@ public class UserServiceImpl implements UserService {
             throw new DuplicateResourceException("Người dùng", "email", request.email());
         }
 
-        Company company = resolveCompany(request.companyId());
-        List<Role> roles = resolveRoles(request.roleIds());
+        if (request.companyId() != null) {
+            Company company = resolveCompany(request.companyId());
+            user.setCompany(company);
+        }
+        Long updateDeptId = request.departmentId() != null ? request.departmentId() : request.gvdepartmentId();
+        if (updateDeptId != null) {
+            if (updateDeptId <= 0) {
+                user.setDepartment(null);
+            } else {
+                user.setDepartment(resolveDepartment(updateDeptId));
+            }
+        }
+        if (request.roleIds() != null && !request.roleIds().isEmpty()) {
+            List<Role> roles = resolveRoles(request.roleIds());
+            user.setRoles(roles);
+        }
 
         user.setName(request.name());
         user.setEmail(request.email());
@@ -96,8 +119,11 @@ public class UserServiceImpl implements UserService {
         user.setAddress(request.address());
         user.setGender(request.gender());
         user.setAvatar(request.avatar());
-        user.setCompany(company);
-        user.setRoles(roles);
+        user.setIsActive(request.isActive() != null ? request.isActive() : true);
+        if (request.isActive() != null) {
+            user.setIsActive(request.isActive());
+        }
+// roles & company updated above if provided
 
         User saved = userRepository.save(user);
         return UserResponse.fromEntity(saved);
@@ -128,6 +154,14 @@ public class UserServiceImpl implements UserService {
         }
         refreshTokenRepository.deleteByUserId(id);
         userRepository.deleteById(id);
+    }
+
+    private GvDepartment resolveDepartment(Long departmentId) {
+        if (departmentId == null) {
+            return null;
+        }
+        return departmentRepository.findById(departmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Phòng ban", "id", departmentId));
     }
 
     private Company resolveCompany(Long companyId) {

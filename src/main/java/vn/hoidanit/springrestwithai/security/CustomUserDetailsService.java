@@ -33,10 +33,13 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .map(role -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.getName()))
                 .toList();
 
+        boolean isEnabled = user.getIsActive() == null || user.getIsActive();
+
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
                 .password(user.getPassword())
                 .authorities(authorities)
+                .disabled(!isEnabled)
                 .build();
     }
 }

@@ -30,5 +30,10 @@ public record UpdateUserRequest(
 
         Long companyId,
 
-        List<Long> roleIds) {
+        Long departmentId,
+
+        Long gvdepartmentId,
+
+        List<Long> roleIds,
+        Boolean isActive) {
 }

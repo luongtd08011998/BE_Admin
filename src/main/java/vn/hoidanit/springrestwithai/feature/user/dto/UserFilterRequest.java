@@ -10,5 +10,8 @@ public record UserFilterRequest(
         Integer ageFrom,
         Integer ageTo,
         GenderEnum gender,
-        String roleName) {
+        String roleName,
+        Long departmentId,
+        Long gvdepartmentId,
+        Boolean isActive) {
 }

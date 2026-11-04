@@ -63,6 +63,15 @@ public class UserSpecification {
                         cb.equal(from.get("gender"), filter.gender()));
             }
 
+            Long deptId = filter.departmentId() != null ? filter.departmentId() : filter.gvdepartmentId();
+            if (deptId != null) {
+                predicates.add(cb.equal(from.get("department").get("id"), deptId));
+            }
+
+            if (filter.isActive() != null) {
+                predicates.add(cb.equal(from.get("isActive"), filter.isActive()));
+            }
+
             if (filter.roleName() != null && !filter.roleName().isBlank()) {
                 Join<User, Role> rolesJoin = from.join("roles", JoinType.INNER);
                 predicates.add(

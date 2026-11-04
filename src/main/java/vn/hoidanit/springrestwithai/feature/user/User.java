@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import vn.hoidanit.springrestwithai.feature.article.Article;
 import vn.hoidanit.springrestwithai.feature.auth.RefreshToken;
 import vn.hoidanit.springrestwithai.feature.company.Company;
+import vn.hoidanit.springrestwithai.gv.department.GvDepartment;
 import vn.hoidanit.springrestwithai.feature.role.Role;
 import vn.hoidanit.springrestwithai.util.constant.GenderEnum;
 
@@ -54,9 +55,16 @@ public class User {
 
     private String avatar;
 
+    @Column(name = "is_active")
+    private Boolean isActive = true;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id")
     private Company company;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "gvdepartment_id")
+    private GvDepartment department;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "user_role", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
@@ -79,6 +87,9 @@ public class User {
 
     @PrePersist
     protected void onCreate() {
+        if (isActive == null) {
+            isActive = true;
+        }
         createdAt = Instant.now();
         updatedAt = Instant.now();
     }
@@ -155,6 +166,14 @@ public class User {
         this.avatar = avatar;
     }
 
+    public GvDepartment getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(GvDepartment department) {
+        this.department = department;
+    }
+
     public Company getCompany() {
         return company;
     }
@@ -177,5 +196,13 @@ public class User {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 }

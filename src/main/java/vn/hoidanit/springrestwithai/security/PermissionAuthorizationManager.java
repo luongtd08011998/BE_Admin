@@ -11,6 +11,8 @@ import java.util.function.Supplier;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.stereotype.Component;
@@ -63,8 +65,13 @@ public class PermissionAuthorizationManager
         String requestPath = context.getRequest().getRequestURI();
         String httpMethod = context.getRequest().getMethod();
 
-        // Lấy roles của user từ JWT
+        // Lấy roles của user từ JWT hoặc SecurityContext
         List<String> userRoles = getUserRolesFromJwt(authentication);
+
+        // Bypass toàn bộ quyền cho SUPER_ADMIN hoặc ADMIN
+        if (isAdmin(authentication, userRoles)) {
+            return new AuthorizationDecision(true);
+        }
 
         // Với mỗi role → lấy permissions từ cache → check match
         for (String role : userRoles) {
@@ -86,14 +93,22 @@ public class PermissionAuthorizationManager
 
     /**
      * JWT claim "roles" may be List, JSONArray-backed Collection, etc. — normalize to strings.
+     * Fallback sang authentication.getAuthorities() nếu không có trong claim JWT.
      */
     private List<String> getUserRolesFromJwt(Authentication authentication) {
-        if (!(authentication instanceof JwtAuthenticationToken jwtToken)) {
+        if (authentication == null) {
             return Collections.emptyList();
+        }
+        if (!(authentication instanceof JwtAuthenticationToken jwtToken)) {
+            return authentication.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .toList();
         }
         Object rolesClaim = jwtToken.getToken().getClaim("roles");
         if (rolesClaim == null) {
-            return Collections.emptyList();
+            return authentication.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .toList();
         }
         if (rolesClaim instanceof Collection<?> roles) {
             List<String> out = new ArrayList<>();
@@ -114,12 +129,17 @@ public class PermissionAuthorizationManager
      * Dùng cho @PreAuthorize("@permissionAuthorizationManager.hasPermission(...)")
      */
     public boolean hasPermission(String permissionName) {
-        Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             return false;
         }
 
         List<String> userRoles = getUserRolesFromJwt(authentication);
+        // Bypass cho SUPER_ADMIN hoặc ADMIN
+        if (isAdmin(authentication, userRoles)) {
+            return true;
+        }
+
         for (String role : userRoles) {
             List<Permission> permissions = rolePermissionsCache.getOrDefault(role, Collections.emptyList());
             for (Permission perm : permissions) {
@@ -129,5 +149,26 @@ public class PermissionAuthorizationManager
             }
         }
         return false;
+    }
+
+    /**
+     * Kiểm tra xem user có phải là SUPER_ADMIN hoặc ADMIN hay không.
+     */
+    private boolean isAdmin(Authentication authentication, List<String> userRoles) {
+        if (userRoles != null && userRoles.stream().anyMatch(this::isAdminRoleName)) {
+            return true;
+        }
+        if (authentication != null && authentication.getAuthorities() != null) {
+            return authentication.getAuthorities().stream()
+                    .anyMatch(a -> a != null && isAdminRoleName(a.getAuthority()));
+        }
+        return false;
+    }
+
+    private boolean isAdminRoleName(String roleName) {
+        if (roleName == null) return false;
+        String r = roleName.trim().toUpperCase();
+        return r.equals("ROLE_SUPER_ADMIN") || r.equals("SUPER_ADMIN")
+                || r.equals("ROLE_ADMIN") || r.equals("ADMIN");
     }
 }

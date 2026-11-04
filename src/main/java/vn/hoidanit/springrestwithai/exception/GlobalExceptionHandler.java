@@ -20,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.access.AccessDeniedException;
@@ -46,6 +47,13 @@ public class GlobalExceptionHandler {
                 log.warn("BadCredentialsException: {}", ex.getMessage());
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                                 .body(ApiResponse.unauthorized("Email hoặc mật khẩu không đúng"));
+        }
+
+        @ExceptionHandler(DisabledException.class)
+        public ResponseEntity<ApiResponse<Void>> handleDisabledException(DisabledException ex) {
+                log.warn("DisabledException: {}", ex.getMessage());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                .body(ApiResponse.ofError(403, "Tài khoản của bạn đã bị ngừng hoạt động. Vui lòng liên hệ quản trị viên.", "Forbidden"));
         }
 
         @ExceptionHandler({AccessDeniedException.class, AuthorizationDeniedException.class})

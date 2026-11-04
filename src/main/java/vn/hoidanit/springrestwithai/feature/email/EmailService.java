@@ -34,6 +34,10 @@ public class EmailService {
     @Value("${app.cskh-email:${spring.mail.username}}")
     private String cskhEmail;
 
+    // Email bổ sung nhận thông báo phản ánh (văn phòng)
+    @Value("${app.office-email:office@toctienltd.vn}")
+    private String officeEmail;
+
     public EmailService(JavaMailSender mailSender, FileUploadProperties uploadProperties) {
         this.mailSender = mailSender;
         this.uploadProperties = uploadProperties;
@@ -53,7 +57,7 @@ public class EmailService {
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
             helper.setFrom(senderEmail, "Hệ thống Nước sạch - CSKH");
-            helper.setTo(cskhEmail);
+            helper.setTo(new String[] { cskhEmail, officeEmail });
             helper.setSubject("[PHẢN ÁNH MỚI] Mã: " + feedback.getTrackingCode() + " - " + feedback.getIssueType().name());
 
             // Build HTML Content

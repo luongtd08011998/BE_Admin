@@ -18,7 +18,7 @@ public class SchedulingConfig {
     @Bean
     public ThreadPoolTaskScheduler taskScheduler() {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
-        scheduler.setPoolSize(3);
+        scheduler.setPoolSize(4); // 1 PaymentNotify, 1 InvoiceNotify, 1 GvTaskScheduler, 1 dự phòng
         scheduler.setThreadNamePrefix("scheduling-");
         scheduler.setAwaitTerminationSeconds(30);
         scheduler.setWaitForTasksToCompleteOnShutdown(true);

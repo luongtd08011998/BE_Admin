@@ -14,6 +14,7 @@ public interface NotificationService {
     void sendPaymentSuccessNotification(Integer customerId, Integer monthInvoiceId);
     void sendDebtReminderNotification(Integer customerId, Integer monthInvoiceId, String yearMonth, String digiCode, String customerName, Double amount, String address);
     void sendOverdueNotification(Integer customerId, Integer monthInvoiceId, String yearMonth, String digiCode, String customerName, String address);
+    void sendWaterCutoffNotification(Integer customerId, Integer monthInvoiceId, String yearMonth, String digiCode, String employeeName, String employeePhone);
     void sendWaterCutoffNotification(Integer customerId, Integer monthInvoiceId, String digiCode, String employeeName, String employeePhone);
     void notifyFeedbackStatusChanged(Feedback feedback, FeedbackStatus newStatus);
     void notifyFeedbackReply(Feedback feedback, String replyContent);
