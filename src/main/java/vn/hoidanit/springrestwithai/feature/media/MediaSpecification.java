@@ -25,6 +25,16 @@ public class MediaSpecification {
                 if (filter.fileType() != null && !filter.fileType().isBlank()) {
                     predicates.add(cb.equal(cb.lower(root.get("fileType")), filter.fileType().toLowerCase()));
                 }
+
+                if (filter.folderId() != null) {
+                    predicates.add(cb.equal(root.get("folderId"), filter.folderId()));
+                } else if (Boolean.TRUE.equals(filter.rootOnly())) {
+                    predicates.add(cb.isNull(root.get("folderId")));
+                }
+            }
+
+            if (query != null && query.getOrderList().isEmpty()) {
+                query.orderBy(cb.desc(root.get("createdAt")));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));

@@ -37,6 +37,9 @@ public class Media {
     @Column(name = "uploaded_by", nullable = false)
     private Long uploadedBy;
 
+    @Column(name = "folder_id")
+    private Long folderId;
+
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
 
@@ -76,6 +79,9 @@ public class Media {
 
     public Long getUploadedBy() { return uploadedBy; }
     public void setUploadedBy(Long uploadedBy) { this.uploadedBy = uploadedBy; }
+
+    public Long getFolderId() { return folderId; }
+    public void setFolderId(Long folderId) { this.folderId = folderId; }
 
     public Instant getCreatedAt() { return createdAt; }
 

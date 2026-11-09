@@ -12,6 +12,7 @@ public record MediaResponse(
         String fileType,
         Long fileSize,
         Long uploadedBy,
+        Long folderId,
         Instant createdAt) {
 
     public static MediaResponse fromEntity(Media media) {
@@ -23,6 +24,7 @@ public record MediaResponse(
                 media.getFileType(),
                 media.getFileSize(),
                 media.getUploadedBy(),
+                media.getFolderId(),
                 media.getCreatedAt());
     }
 }

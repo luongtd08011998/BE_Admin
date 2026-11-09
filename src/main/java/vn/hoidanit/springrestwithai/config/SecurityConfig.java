@@ -163,6 +163,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/qlkh/customer/feedbacks/**").authenticated()
                         .requestMatchers("/api/v1/admin/logs").authenticated()
                         .requestMatchers("/api/v1/admin/notifications/**").authenticated()
+                        .requestMatchers("/api/v1/media/folders", "/api/v1/media/folders/**", "/api/v1/media/move").authenticated()
                         .requestMatchers("/api/v1/auth/logout").authenticated()
                         .requestMatchers("/api/v1/gv/**").authenticated()
                         .anyRequest().access(permissionAuthorizationManager))
